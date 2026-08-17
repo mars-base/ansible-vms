@@ -78,6 +78,25 @@ ip neigh show dev br0 | grep -i <MAC>
 
 Or use the `list-vms` playbook which does this automatically.
 
+## Windows Base Image
+
+The Windows qcow2 base image is built with [packer-windows-kubevirt](https://github.com/mars-base/packer-windows-kubevirt). It uses Packer + QEMU to produce a sysprep-generalized Windows image with:
+
+- **virtio drivers** pre-installed (vioscsi, viostor, netkvm, vioserial, viorng, balloon, viofs)
+- **QEMU Guest Agent** + **Cloudbase-Init**
+- **WinRM HTTPS** (port 5986) + **RDP** (port 3389) enabled
+- EFI boot with secure boot keys
+
+Build your own custom image:
+
+```bash
+git clone https://github.com/mars-base/packer-windows-kubevirt
+cd packer-windows-kubevirt
+packer build <template>
+```
+
+Then set the output path in `vms.csv` `base_image` field.
+
 ## Windows VM Features
 
 When `type=windows`, the domain XML template includes:
