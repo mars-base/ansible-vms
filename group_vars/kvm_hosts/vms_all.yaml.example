@@ -4,6 +4,6 @@
 # Copy to vms_all.yaml and edit
 
 vm_cloud_init_user: "root"
-vm_cloud_init_ssh_password: "changeme"
+vm_cloud_init_ssh_password: "debian"
 vm_cloud_init_timezone: "Asia/Shanghai"
 vm_cloud_init_locale: "en_US.UTF-8"
