@@ -23,7 +23,7 @@ vm_default_reboot_action: restart
 vm_default_crash_action: destroy
 
 # Disk/NIC: windows uses scsi, linux uses virtio
-vm_default_disk_bus_linux: virtio
+vm_default_disk_bus_linux: scsi
 vm_default_disk_bus_windows: scsi
 vm_default_nic_model: virtio
 
