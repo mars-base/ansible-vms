@@ -60,6 +60,24 @@ ap playbooks/create-vm.yaml
 | `firmware` | `efi` or `bios` | `efi` |
 | `autostart` | Auto-start on boot | `true` |
 
+## Network Architecture
+
+VMs connect to the local network via a **bridge** (default `br0`), receiving IP addresses from the LAN's DHCP server — same subnet as the host.
+
+```
+LAN (10.241.20.0/22, DHCP, gateway 10.241.20.1)
+├── KVM Host (10.241.21.97, br0)
+└── VM (10.241.21.x, DHCP via br0, virtio NIC)
+```
+
+Each VM is assigned a **pinned MAC address** in `vms.csv`, so its DHCP lease is stable. To look up a VM's IP:
+
+```bash
+ip neigh show dev br0 | grep -i <MAC>
+```
+
+Or use the `list-vms` playbook which does this automatically.
+
 ## Windows VM Features
 
 When `type=windows`, the domain XML template includes:
