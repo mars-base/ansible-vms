@@ -1,23 +1,9 @@
 ---
 
-# KVM 宿主机配置变量
+# Cloud-init configuration for Linux VMs
+# Copy to vms_all.yaml and edit
 
-# 宿主机上 libvirt 相关路径
-kvm_images_dir: /var/lib/libvirt/images
-kvm_iso_dir: /var/lib/libvirt/boot
-kvm_pool_dir: /srv/vm-pool
-
-# 默认网桥配置
-kvm_bridge_name: virbr0
-kvm_bridge_network: 192.168.122.0/24
-
-# 虚拟机定义列表 —— 按需在 host_vars 或 playbook 中覆盖
-# vms:
-#   - name: vm-dev-01
-#     vcpus: 4
-#     memory_mb: 8192
-#     disk_gb: 100
-#     os: ubuntu22.04
-#     network: default
-#     autostart: true
-vms: []
+vm_cloud_init_user: "root"
+vm_cloud_init_ssh_password: "changeme"
+vm_cloud_init_timezone: "Asia/Shanghai"
+vm_cloud_init_locale: "en_US.UTF-8"
