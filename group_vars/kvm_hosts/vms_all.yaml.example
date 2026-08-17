@@ -2,8 +2,36 @@
 
 # Cloud-init configuration for Linux VMs
 # Copy to vms_all.yaml and edit
+#
+# These variables apply to all Linux VMs (can be overridden per-VM in vms.csv).
+# cloud-init runs on first boot to configure the VM.
+#
+# Security notes:
+#   - Change vm_cloud_init_ssh_password before deployment
+#   - Add your SSH public key in vm_cloud_init_ssh_authorized_keys
+#   - For production, consider using Ansible Vault for sensitive data
 
+# Default user for cloud-init (root for direct root access)
 vm_cloud_init_user: "root"
+
+# SSH password (set to empty string "" to disable password auth)
+# WARNING: Change this before deploying!
 vm_cloud_init_ssh_password: "debian"
+
+# Timezone (use tz database names, e.g. Asia/Shanghai, America/New_York)
 vm_cloud_init_timezone: "Asia/Shanghai"
+
+# Locale (e.g. en_US.UTF-8, zh_CN.UTF-8)
 vm_cloud_init_locale: "en_US.UTF-8"
+
+# SSH authorized keys (list of public keys)
+# Uncomment and add your keys for passwordless SSH access:
+# vm_cloud_init_ssh_authorized_keys:
+#   - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... user@host"
+#   - "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTY... user@host"
+
+# Packages to install on first boot (in addition to base image packages)
+# vm_cloud_init_packages:
+#   - vim
+#   - curl
+#   - git

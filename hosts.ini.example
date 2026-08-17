@@ -1,21 +1,26 @@
 # VM management inventory
 # Copy to hosts.ini and edit for your environment
+#
+# Usage:
+#   ap playbooks/create-vm.yaml --limit local
+#   ap playbooks/list-vms.yaml
 
 # kvm_hosts: KVM host for VM creation and management
+# ansible_connection=local 表示在本机执行，不需要 SSH
 [kvm_hosts]
 local ansible_host=127.0.0.1 ansible_connection=local
-# kvm-node-01 ansible_host=192.168.1.10 ansible_user=root
+# kvm-node-01 ansible_host=192.168.1.10 ansible_user=root ansible_ssh_private_key_file=~/.ssh/id_rsa
 
-# vm_dev: development VMs
+# vm_dev: development VMs (placeholder for future group management)
 [vm_dev]
 
-# vm_prod: production VMs
+# vm_prod: production VMs (placeholder for future group management)
 [vm_prod]
 
-# vm_test: test VMs
+# vm_test: test VMs (placeholder for future group management)
 [vm_test]
 
-# all VMs
+# all VMs (aggregates all vm_* groups)
 [vms:children]
 vm_dev
 vm_prod

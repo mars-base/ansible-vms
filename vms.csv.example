@@ -1,3 +1,27 @@
+# VM Definition (vms.csv)
+# Copy to vms.csv and edit with your VM definitions
+#
+# Fields:
+#   name        - VM name (unique identifier, used in virsh commands)
+#   host        - KVM host (must match inventory name in hosts.ini)
+#   type        - OS type: windows / linux
+#   memory_mb   - Memory in MB
+#   vcpus       - CPU cores
+#   os          - OS variant (used for virt-install --os-variant)
+#   disk_gb     - System disk size in GB
+#   data_disk_gb - Data disk size in GB (0 or empty = no data disk)
+#   base_image  - Base qcow2 image path (must exist on host)
+#   bridge      - Network bridge name (e.g. br0)
+#   mac         - MAC address (pinned for stable DHCP lease, use 52:54:00:xx:xx:xx)
+#   firmware    - Boot firmware: efi / empty (BIOS for Linux, efi for Windows)
+#   autostart   - Auto-start on host boot: true / false
+#   storage_dir - Custom storage path (empty = default /var/lib/libvirt/images)
+#                 VM files stored in <storage_dir>/<vm-name>/
+#
+# Usage:
+#   ap playbooks/create-vm.yaml          # Create all VMs
+#   ap playbooks/destroy-vm.yaml -e vm_name=xxx -e confirm=true  # Destroy VM
+
 name,host,type,memory_mb,vcpus,os,disk_gb,data_disk_gb,base_image,bridge,mac,firmware,autostart,storage_dir
 my-windows-vm,local,windows,8192,4,win11,80,10,/path/to/windows-base.qcow2,br0,52:54:00:xx:xx:xx,efi,true,
 my-linux-vm,local,linux,2048,2,debian12,20,0,/path/to/debian-12-genericcloud-amd64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms

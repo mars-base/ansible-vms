@@ -1,36 +1,50 @@
 [defaults]
 
 # Output and logging
+# yaml 格式输出，比默认 json 更易读
 stdout_callback = yaml
 bin_ansible_callbacks = True
+# 日志文件路径，留空则不记录日志
 log_path = var/ansible.log
 
 # Inventory and connection
+# 默认 inventory 文件
 inventory = hosts.ini
+# 关闭 SSH host key 检查（首次连接不用手动确认）
 host_key_checking = False
 remote_port = 22
 transport = ssh
+# 并发执行数量
 forks = 20
 
 # Facts caching
+# smart: 按需收集 facts
 gathering = smart
+# 缓存到本地 JSON 文件，避免重复收集
 fact_caching = jsonfile
+# 缓存有效期（秒），86400 = 24 小时
 fact_caching_timeout = 86400
 fact_caching_connection = var/facts
 
 # Roles and paths
+# role 搜索路径，用冒号分隔
 roles_path = roles:roles_init
 retry_files_save_path = var
 
 # Warnings and behavior
+# 关闭各类警告，保持输出整洁
 deprecation_warnings = False
 command_warnings = False
 force_valid_group_names = ignore
+# 自动检测 Python 解释器路径
 interpreter_python = auto_silent
 no_log = False
 
 ansible_managed = Ansible managed: modified on %Y-%m-%d %H:%M:%S by {uid} on {host}
 
 [ssh_connection]
+# 优先使用 scp（某些环境下 sftp 不可用）
 scp_if_ssh = True
+# 启用 pipelining 减少 SSH 连接次数，提升执行速度
+# 注意：目标主机需要关闭 requiretty
 pipelining = True
