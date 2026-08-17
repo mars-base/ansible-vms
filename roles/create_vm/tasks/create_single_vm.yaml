@@ -36,6 +36,30 @@
         mode: "0644"
       when: vm.firmware | default(vm_default_firmware) == 'efi'
 
+    # Linux cloud-init: generate seed ISO
+    - name: "Generate cloud-init user-data for {{ vm.name }}"
+      template:
+        src: user-data.j2
+        dest: "/tmp/{{ vm.name }}-user-data"
+        mode: "0644"
+      when: vm.type | default('linux') == 'linux'
+
+    - name: "Generate cloud-init meta-data for {{ vm.name }}"
+      template:
+        src: meta-data.j2
+        dest: "/tmp/{{ vm.name }}-meta-data"
+        mode: "0644"
+      when: vm.type | default('linux') == 'linux'
+
+    - name: "Generate cloud-init ISO for {{ vm.name }}"
+      shell: |
+        genisoimage -output {{ vm_images_dir }}/{{ vm.name }}-seed.iso \
+          -volid cidata -joliet -rock \
+          /tmp/{{ vm.name }}-user-data /tmp/{{ vm.name }}-meta-data
+      args:
+        creates: "{{ vm_images_dir }}/{{ vm.name }}-seed.iso"
+      when: vm.type | default('linux') == 'linux'
+
     - name: "Generate domain XML for {{ vm.name }}"
       template:
         src: domain.xml.j2

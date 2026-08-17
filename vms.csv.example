@@ -1,2 +1,3 @@
 name,host,type,memory_mb,vcpus,os,disk_gb,data_disk_gb,base_image,bridge,mac,firmware,autostart
-my-vm,local,windows,8192,4,win11,80,10,/path/to/base.qcow2,br0,52:54:00:xx:xx:xx,efi,true
+my-windows-vm,local,windows,8192,4,win11,80,10,/path/to/windows-base.qcow2,br0,52:54:00:xx:xx:xx,efi,true
+my-linux-vm,local,linux,2048,2,debian12,20,0,/path/to/debian-12-genericcloud-amd64.qcow2,br0,52:54:00:xx:xx:xx,efi,true

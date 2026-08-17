@@ -1,0 +1,36 @@
+#cloud-config
+
+hostname: {{ vm.name }}
+fqdn: {{ vm.name }}
+manage_etc_hosts: true
+locale: {{ vm.cloud_init_locale | default(vm_cloud_init_locale) }}
+timezone: {{ vm.cloud_init_timezone | default(vm_cloud_init_timezone) }}
+
+users:
+  - name: {{ vm.cloud_init_user | default(vm_cloud_init_user) }}
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+{% if vm.cloud_init_ssh_password is defined and vm.cloud_init_ssh_password != '' %}
+    lock_passwd: false
+    plain_text_passwd: "{{ vm.cloud_init_ssh_password }}"
+{% endif %}
+{% if vm.cloud_init_ssh_authorized_keys is defined and vm.cloud_init_ssh_authorized_keys | length > 0 %}
+    ssh_authorized_keys:
+{% for key in vm.cloud_init_ssh_authorized_keys %}
+      - "{{ key }}"
+{% endfor %}
+{% endif %}
+
+ssh_pwauth: {{ 'true' if (vm.cloud_init_ssh_password is defined and vm.cloud_init_ssh_password != '') else 'false' }}
+disable_root: false
+
+package_update: true
+package_upgrade: false
+packages:
+{% for pkg in vm.cloud_init_packages | default(vm_cloud_init_packages) %}
+  - {{ pkg }}
+{% endfor %}
+
+runcmd:
+  - systemctl enable qemu-guest-agent
+  - systemctl start qemu-guest-agent

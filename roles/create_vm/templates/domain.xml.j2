@@ -35,7 +35,7 @@
     <feature policy='require' name='vmx'/>
 {% endif %}
   </cpu>
-  <clock offset='{{ vm.clock_offset | default(vm_default_clock_offset) }}'>
+  <clock offset='{{ vm.clock_offset | default(lookup("vars", "vm_default_clock_offset_" + vm.type | default("linux"), default="utc")) }}'>
     <timer name='rtc' tickpolicy='catchup'/>
     <timer name='pit' tickpolicy='delay'/>
     <timer name='hpet' present='no'/>
@@ -55,17 +55,17 @@
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2' cache='none' io='native'/>
       <source file='{{ vm_images_dir }}/{{ vm.name }}.qcow2'/>
-      <target dev='sda' bus='{{ vm.disk_bus | default(vm_default_disk_bus) }}'/>
+      <target dev='vda' bus='{{ vm.disk_bus | default(lookup("vars", "vm_default_disk_bus_" + vm.type | default("linux"), default="virtio")) }}'/>
       <boot order='1'/>
     </disk>
 {% if vm.data_disk_gb is defined and vm.data_disk_gb | int > 0 %}
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2' cache='none' io='native'/>
       <source file='{{ vm_images_dir }}/{{ vm.name }}-data.qcow2'/>
-      <target dev='sdb' bus='{{ vm.disk_bus | default(vm_default_disk_bus) }}'/>
+      <target dev='vdb' bus='{{ vm.disk_bus | default(lookup("vars", "vm_default_disk_bus_" + vm.type | default("linux"), default="virtio")) }}'/>
     </disk>
 {% endif %}
-    <controller type='{{ vm.disk_bus | default(vm_default_disk_bus) }}' model='virtio-{{ vm.disk_bus | default(vm_default_disk_bus) }}' index='0'/>
+    <controller type='{{ vm.disk_bus | default(lookup("vars", "vm_default_disk_bus_" + vm.type | default("linux"), default="virtio")) }}' model='virtio-{{ vm.disk_bus | default(lookup("vars", "vm_default_disk_bus_" + vm.type | default("linux"), default="virtio")) }}' index='0'/>
     <controller type='usb' model='qemu-xhci' index='0'/>
     <controller type='pci' model='pcie-root'/>
     <controller type='pci' model='pcie-root-port'/>
@@ -75,7 +75,10 @@
     <controller type='sata' index='0'/>
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
-      <target dev='sdc' bus='sata'/>
+{% if vm.type | default('linux') == 'linux' %}
+      <source file='{{ vm_images_dir }}/{{ vm.name }}-seed.iso'/>
+{% endif %}
+      <target dev='sr0' bus='sata'/>
       <readonly/>
     </disk>
     <interface type='bridge'>

@@ -1,36 +1,51 @@
 ---
 
-# 默认存储路径
 vm_images_dir: /var/lib/libvirt/images
 vm_csv_file: "{{ inventory_dir }}/vms.csv"
 
-# OVMF 固件路径
+# OVMF firmware
 ovmf_code: /usr/share/OVMF/OVMF_CODE.ms.fd
 ovmf_vars: /usr/share/OVMF/OVMF_VARS.ms.fd
 
-# qemu-emulator
 qemu_emulator: /usr/bin/qemu-system-x86_64
 
-# Windows VM 默认配置
+# Architecture defaults
 vm_default_arch: x86_64
 vm_default_machine: q35
 vm_default_firmware: efi
-vm_default_clock_offset: localtime
+
+# Clock: windows=localtime, linux=utc
+vm_default_clock_offset_linux: utc
+vm_default_clock_offset_windows: localtime
+
 vm_default_poweroff_action: destroy
 vm_default_reboot_action: restart
 vm_default_crash_action: destroy
 
-# 磁盘/网络
-vm_default_disk_bus: scsi
+# Disk/NIC: windows uses scsi, linux uses virtio
+vm_default_disk_bus_linux: virtio
+vm_default_disk_bus_windows: scsi
 vm_default_nic_model: virtio
-vm_default_scsi_controller: true
 
-# 图形
+# Graphics
 vm_default_graphics_type: spice
 vm_default_graphics_listen: 127.0.0.1
 vm_default_video_model: qxl
 
-# 设备
+# Devices
 vm_default_tpm: true
 vm_default_memballoon: true
 vm_default_rng: true
+
+# Cloud-init defaults for Linux VMs
+vm_cloud_init_user: root
+vm_cloud_init_ssh_password: ""
+vm_cloud_init_timezone: Asia/Shanghai
+vm_cloud_init_locale: en_US.UTF-8
+vm_cloud_init_packages:
+  - qemu-guest-agent
+  - curl
+  - wget
+  - vim
+  - htop
+  - git
