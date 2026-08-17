@@ -3,11 +3,12 @@
   <memory unit='KiB'>{{ vm.memory_mb | int * 1024 }}</memory>
   <currentMemory unit='KiB'>{{ vm.memory_mb | int * 1024 }}</currentMemory>
   <vcpu placement='static'>{{ vm.vcpus }}</vcpu>
+{% set _storage = vm.storage_dir if vm.storage_dir | default('') | length > 0 else vm_images_dir %}
   <os>
     <type arch='{{ vm.arch | default(vm_default_arch) }}' machine='{{ vm.machine | default(vm_default_machine) }}'>hvm</type>
 {% if vm.firmware | default(vm_default_firmware) == 'efi' %}
     <loader readonly='yes' type='pflash'>{{ ovmf_code_ms }}</loader>
-    <nvram template='{{ ovmf_vars_ms }}'>{{ vm_images_dir }}/{{ vm.name }}-OVMF_VARS.fd</nvram>
+    <nvram template='{{ ovmf_vars_ms }}'>{{ _storage }}/{{ vm.name }}-OVMF_VARS.fd</nvram>
 {% endif %}
   </os>
   <features>
@@ -48,14 +49,14 @@
     <emulator>{{ qemu_emulator }}</emulator>
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2' cache='none' io='native'/>
-      <source file='{{ vm_images_dir }}/{{ vm.name }}.qcow2'/>
+      <source file='{{ _storage }}/{{ vm.name }}.qcow2'/>
       <target dev='sda' bus='{{ vm.disk_bus | default(vm_default_disk_bus_windows) }}'/>
       <boot order='1'/>
     </disk>
 {% if vm.data_disk_gb is defined and vm.data_disk_gb | int > 0 %}
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2' cache='none' io='native'/>
-      <source file='{{ vm_images_dir }}/{{ vm.name }}-data.qcow2'/>
+      <source file='{{ _storage }}/{{ vm.name }}-data.qcow2'/>
       <target dev='sdb' bus='{{ vm.disk_bus | default(vm_default_disk_bus_windows) }}'/>
     </disk>
 {% endif %}

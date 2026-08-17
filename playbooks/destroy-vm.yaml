@@ -67,19 +67,19 @@
           shell: virsh undefine {{ _vms[0].name }} --nvram
           register: _undefine
 
-    - name: Set storage paths
+    - name: Set storage path
       set_fact:
-        _images_dir: "{{ vm_images_dir | default('/var/lib/libvirt/images') }}"
+        _storage_dir: "{{ _vms[0].storage_dir if _vms[0].storage_dir | default('') | length > 0 else vm_images_dir | default('/var/lib/libvirt/images') }}"
 
     - name: Delete VM disk files
       file:
         path: "{{ item }}"
         state: absent
       loop:
-        - "{{ _images_dir }}/{{ _vms[0].name }}.qcow2"
-        - "{{ _images_dir }}/{{ _vms[0].name }}-data.qcow2"
-        - "{{ _images_dir }}/{{ _vms[0].name }}-OVMF_VARS.fd"
-        - "{{ _images_dir }}/{{ _vms[0].name }}-seed.iso"
+        - "{{ _storage_dir }}/{{ _vms[0].name }}.qcow2"
+        - "{{ _storage_dir }}/{{ _vms[0].name }}-data.qcow2"
+        - "{{ _storage_dir }}/{{ _vms[0].name }}-OVMF_VARS.fd"
+        - "{{ _storage_dir }}/{{ _vms[0].name }}-seed.iso"
       register: _delete_files
 
     - name: Show result

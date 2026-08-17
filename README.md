@@ -123,12 +123,13 @@ Deletes: domain definition, disk images (qcow2), OVMF VARS, cloud-init ISO, TPM 
 | `vcpus` | CPU cores | `4` |
 | `os` | OS variant | `win11` |
 | `disk_gb` | System disk size | `80` |
-| `data_disk_gb` | Data disk size | `10` |
+| `data_disk_gb` | Data disk size (0 for none) | `10` |
 | `base_image` | Base qcow2 image path | `/path/to/base.qcow2` |
 | `bridge` | Network bridge | `br0` |
 | `mac` | MAC address | `52:54:00:cc:68:2c` |
-| `firmware` | `efi` or `bios` | `efi` |
+| `firmware` | `efi` or empty (BIOS) | `efi` |
 | `autostart` | Auto-start on boot | `true` |
+| `storage_dir` | VM storage path (optional, default: `/var/lib/libvirt/images`) | `/data/vms` |
 
 ## Network Architecture
 

@@ -14,24 +14,35 @@
 - name: "Create VM {{ vm.name }}"
   when: _vm_exists.rc != 0
   block:
+    - name: "Set storage directory for {{ vm.name }}"
+      set_fact:
+        _vm_storage_dir: "{{ vm.storage_dir if vm.storage_dir | default('') | length > 0 else vm_images_dir }}"
+
+    - name: "Create storage directory for {{ vm.name }}"
+      file:
+        path: "{{ _vm_storage_dir }}"
+        state: directory
+        mode: "0755"
+      when: _vm_storage_dir != vm_images_dir
+
     - name: "Create qcow2 overlay for {{ vm.name }}"
       shell: |
         qemu-img create -f qcow2 -F qcow2 \
           -b "{{ vm.base_image }}" \
-          "{{ vm_images_dir }}/{{ vm.name }}.qcow2" \
+          "{{ _vm_storage_dir }}/{{ vm.name }}.qcow2" \
           "{{ vm.disk_gb }}G"
 
     - name: "Create data disk for {{ vm.name }}"
       shell: |
         qemu-img create -f qcow2 \
-          "{{ vm_images_dir }}/{{ vm.name }}-data.qcow2" \
+          "{{ _vm_storage_dir }}/{{ vm.name }}-data.qcow2" \
           "{{ vm.data_disk_gb }}G"
       when: vm.data_disk_gb is defined and vm.data_disk_gb | int > 0
 
     - name: "Copy OVMF VARS for {{ vm.name }}"
       copy:
         src: "{{ ovmf_vars_ms if vm.type | default('linux') == 'windows' else ovmf_vars }}"
-        dest: "{{ vm_images_dir }}/{{ vm.name }}-OVMF_VARS.fd"
+        dest: "{{ _vm_storage_dir }}/{{ vm.name }}-OVMF_VARS.fd"
         remote_src: true
         mode: "0644"
       when: (vm.firmware | default('')) | length > 0 and vm.firmware == 'efi'
@@ -61,12 +72,12 @@
     - name: "Generate cloud-init ISO for {{ vm.name }}"
       shell: |
         cd /tmp/{{ vm.name }}-cloudinit && \
-        genisoimage -output {{ vm_images_dir }}/{{ vm.name }}-seed.iso \
+        genisoimage -output {{ _vm_storage_dir }}/{{ vm.name }}-seed.iso \
           -input-charset utf-8 \
           -volid cidata -joliet -rock \
           user-data meta-data
       args:
-        creates: "{{ vm_images_dir }}/{{ vm.name }}-seed.iso"
+        creates: "{{ _vm_storage_dir }}/{{ vm.name }}-seed.iso"
       when: vm.type | default('linux') == 'linux'
 
     - name: "Generate domain XML for {{ vm.name }}"
