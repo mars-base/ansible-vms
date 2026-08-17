@@ -44,9 +44,10 @@
           {% for vm in _vms %}
           {% set idx = loop.index0 %}
           {% set status = _vm_status.results[idx] %}
+          {% set ip = _vm_ip.results[idx].stdout | default('-') %}
           {% if status.rc == 0 %}
           {% set state = status.stdout_lines | select('match', 'State') | list | first | default('') | regex_replace('State:\s*', '') %}
-          {{ '%-20s' | format(vm.name) }} {{ '%-8s' | format(vm.type) }} {{ '%-6s' | format(vm.vcpus + ' vCPU') }} {{ '%-10s' | format(vm.memory_mb + ' MB') }} {{ '%-6s' | format(vm.os) }} {{ state }}
+          {{ '%-20s' | format(vm.name) }} {{ '%-15s' | format(ip) }} {{ '%-8s' | format(vm.type) }} {{ '%-6s' | format(vm.vcpus + ' vCPU') }} {{ '%-10s' | format(vm.memory_mb + ' MB') }} {{ '%-6s' | format(vm.os) }} {{ state }}
           {% else %}
           {{ '%-20s' | format(vm.name) }} NOT DEFINED
           {% endif %}
