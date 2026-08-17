@@ -30,6 +30,7 @@ ansible-vms/
 # 1. Setup
 cp ansible.cfg.example ansible.cfg
 cp hosts.ini.example hosts.ini
+cp vms.csv.example vms.csv    # edit with your VM definitions
 uv sync
 
 # 2. Create VMs defined in vms.csv
