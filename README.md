@@ -42,6 +42,76 @@ uv sync
 ap playbooks/create-vm.yaml
 ```
 
+## Playbooks
+
+All playbooks are idempotent (safe to run multiple times).
+
+### Install Dependencies
+
+```bash
+# Install required packages on KVM host
+ap playbooks/install-dependencies.yaml
+```
+
+Installs: `qemu-kvm`, `libvirt-daemon-system`, `libvirt-clients`, `ovmf`, `swtpm`, `genisoimage`, etc.
+
+### Create VMs
+
+```bash
+# Create all VMs defined in vms.csv
+ap playbooks/create-vm.yaml
+
+# Create VMs on specific host
+ap playbooks/create-vm.yaml --limit local
+```
+
+Creates qcow2 overlay, generates domain XML, defines VM in libvirt, starts if `autostart=true`.
+
+### List VMs
+
+```bash
+# List all VMs with status and IP
+ap playbooks/list-vms.yaml
+```
+
+Output example:
+```
+win11-aifs           10.241.21.65    windows  4 vCPU 8192 MB    win11  shut off
+debian12-01          10.241.23.118   linux    2 vCPU 2048 MB    debian12 running
+```
+
+### Start VM
+
+```bash
+# Start specific VM
+ap playbooks/start-vm.yaml -e vm_name=debian12-01
+```
+
+### Stop VM
+
+```bash
+# Graceful shutdown
+ap playbooks/stop-vm.yaml -e vm_name=win11-aifs
+```
+
+### Restart VM
+
+```bash
+# Stop then start VM
+ap playbooks/restart-vm.yaml -e vm_name=debian12-01
+```
+
+### Destroy VM
+
+```bash
+# Permanently delete VM (requires confirmation)
+ap playbooks/destroy-vm.yaml -e vm_name=win11-aifs -e confirm=true
+```
+
+Deletes: domain definition, disk images (qcow2), OVMF VARS, cloud-init ISO, TPM state.
+
+**Warning**: This is destructive and irreversible. The `--confirm` flag is required.
+
 ## VM Definition (vms.csv)
 
 | Field | Description | Example |
