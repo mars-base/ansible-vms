@@ -1,0 +1,2 @@
+name,host,type,memory_mb,vcpus,os,disk_gb,data_disk_gb,base_image,bridge,mac,firmware,autostart
+win11-aifs,local,windows,8192,4,win11,80,10,/home/fish/bucket/packer-windows-kubevirt/output-windows_11_ltsc_2024_kubevirt/windows_11_ltsc_2024_kubevirt-202604160217.qcow2,br0,52:54:00:cc:68:2c,efi,true

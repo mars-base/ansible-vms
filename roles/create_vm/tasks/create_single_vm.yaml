@@ -1,0 +1,54 @@
+---
+
+- name: "Check if VM {{ vm.name }} exists"
+  shell: virsh dominfo {{ vm.name }} 2>/dev/null
+  register: _vm_exists
+  changed_when: false
+  failed_when: false
+
+- name: "Skip {{ vm.name }} - already exists"
+  debug:
+    msg: "VM {{ vm.name }} already exists, skipping."
+  when: _vm_exists.rc == 0
+
+- name: "Create VM {{ vm.name }}"
+  when: _vm_exists.rc != 0
+  block:
+    - name: "Create qcow2 overlay for {{ vm.name }}"
+      shell: |
+        qemu-img create -f qcow2 -F qcow2 \
+          -b "{{ vm.base_image }}" \
+          "{{ vm_images_dir }}/{{ vm.name }}.qcow2" \
+          "{{ vm.disk_gb }}G"
+
+    - name: "Create data disk for {{ vm.name }}"
+      shell: |
+        qemu-img create -f qcow2 \
+          "{{ vm_images_dir }}/{{ vm.name }}-data.qcow2" \
+          "{{ vm.data_disk_gb }}G"
+      when: vm.data_disk_gb is defined and vm.data_disk_gb | int > 0
+
+    - name: "Copy OVMF VARS for {{ vm.name }}"
+      copy:
+        src: "{{ ovmf_vars }}"
+        dest: "{{ vm_images_dir }}/{{ vm.name }}-OVMF_VARS.fd"
+        remote_src: true
+        mode: "0644"
+      when: vm.firmware | default(vm_default_firmware) == 'efi'
+
+    - name: "Generate domain XML for {{ vm.name }}"
+      template:
+        src: domain.xml.j2
+        dest: "/tmp/{{ vm.name }}.xml"
+        mode: "0644"
+
+    - name: "Define VM {{ vm.name }}"
+      shell: virsh define /tmp/{{ vm.name }}.xml
+
+    - name: "Start VM {{ vm.name }}"
+      shell: virsh start {{ vm.name }}
+      when: vm.autostart | default(true) | bool
+
+    - name: "Set VM {{ vm.name }} autostart"
+      shell: virsh autostart {{ vm.name }}
+      when: vm.autostart | default(true) | bool

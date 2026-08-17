@@ -1,0 +1,18 @@
+---
+
+- name: Read vms.csv
+  read_csv:
+    path: "{{ vm_csv_file }}"
+  register: _vms_csv
+  delegate_to: localhost
+
+- name: Filter VMs for this host
+  set_fact:
+    _vms: "{{ _vms_csv.list | selectattr('host', 'equalto', inventory_hostname) | list }}"
+
+- name: Create VMs
+  include_tasks: create_single_vm.yaml
+  loop: "{{ _vms }}"
+  loop_control:
+    loop_var: vm
+    label: "{{ vm.name }}"

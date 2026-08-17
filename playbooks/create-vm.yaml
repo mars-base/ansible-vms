@@ -1,0 +1,14 @@
+---
+
+# 创建虚拟机
+# 用法: ap playbooks/create-vm.yaml
+
+- name: Create virtual machines
+  gather_facts: false
+  hosts: "{{ HOSTS | default('kvm_hosts') }}"
+  become: true
+  become_user: root
+  become_method: sudo
+  roles:
+    - role: create_vm
+      tags: create_vm

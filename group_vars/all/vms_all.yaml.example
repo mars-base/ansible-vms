@@ -1,0 +1,21 @@
+---
+
+# 全局变量，适用于所有主机
+
+# 默认虚拟机配置
+vm_default_vcpus: 2
+vm_default_memory_mb: 4096
+vm_default_disk_gb: 50
+vm_default_os: ubuntu22.04
+
+# 虚拟机镜像存储路径
+vm_images_dir: /var/lib/libvirt/images
+vm_templates_dir: /srv/vm-templates
+
+# 网络配置
+vm_default_network: default
+vm_default_bridge: virbr0
+
+# SSH 配置
+vm_ssh_key_type: ed25519
+vm_ssh_key_path: ~/.ssh/id_ed25519
