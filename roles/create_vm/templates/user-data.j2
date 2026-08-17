@@ -10,9 +10,10 @@ users:
   - name: {{ vm.cloud_init_user | default(vm_cloud_init_user) }}
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
-{% if vm.cloud_init_ssh_password is defined and vm.cloud_init_ssh_password != '' %}
+{% set _password = vm.cloud_init_ssh_password | default(vm_cloud_init_ssh_password, true) | default('', true) %}
+{% if _password != '' %}
     lock_passwd: false
-    plain_text_passwd: "{{ vm.cloud_init_ssh_password }}"
+    plain_text_passwd: "{{ _password }}"
 {% endif %}
 {% if vm.cloud_init_ssh_authorized_keys is defined and vm.cloud_init_ssh_authorized_keys | length > 0 %}
     ssh_authorized_keys:
@@ -21,7 +22,7 @@ users:
 {% endfor %}
 {% endif %}
 
-ssh_pwauth: {{ 'true' if (vm.cloud_init_ssh_password is defined and vm.cloud_init_ssh_password != '') else 'false' }}
+ssh_pwauth: {{ 'true' if _password != '' else 'false' }}
 disable_root: false
 
 package_update: true

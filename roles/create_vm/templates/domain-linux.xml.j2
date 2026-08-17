@@ -55,7 +55,7 @@
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
       <source file='{{ vm_images_dir }}/{{ vm.name }}-seed.iso'/>
-      <target dev='sr0' bus='sata'/>
+      <target dev='sdc' bus='sata'/>
       <readonly/>
     </disk>
     <interface type='bridge'>
