@@ -258,8 +258,8 @@ wget https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericclou
 **Alternative (archived versions):**
 
 ```bash
-# Browse specific versions at:
-# https://cdimage.debian.org/cdimage/cloud/bookworm/
+# Browse all versions (bookworm, bullseye, trixie, etc.) at:
+# https://cloud.debian.org/images/cloud/
 ```
 
 Then set the path in `vms.csv` `base_image` field:
