@@ -1,0 +1,2 @@
+name,host,type,memory_mb,vcpus,os,disk_gb,data_disk_gb,base_image,bridge,mac,firmware,autostart
+my-vm,local,windows,8192,4,win11,80,10,/path/to/base.qcow2,br0,52:54:00:xx:xx:xx,efi,true

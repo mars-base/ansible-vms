@@ -2,6 +2,7 @@
 *.egg-info/
 hosts.ini
 ansible.cfg
+vms.csv
 # 包含敏感配置（密码等），请使用 .example 文件或 Ansible Vault 管理
 group_vars/*/vms_all.yaml
 host_vars/*/secrets.yaml
