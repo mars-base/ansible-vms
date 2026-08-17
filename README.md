@@ -76,3 +76,7 @@ ap playbooks/create-vm.yaml
 # Second run: detects existing VM, skips all steps
 # ok=5  changed=0  skipped=7
 ```
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE) for details.
