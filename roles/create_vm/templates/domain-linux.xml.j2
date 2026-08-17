@@ -4,8 +4,9 @@
   <currentMemory unit='KiB'>{{ vm.memory_mb | int * 1024 }}</currentMemory>
   <vcpu placement='static'>{{ vm.vcpus }}</vcpu>
   <os>
-    <type arch='{{ vm.arch | default(vm_default_arch) }}' machine='{{ vm.machine | default(vm_default_machine) }}'>hvm</type>
-{% if vm.firmware | default(vm_default_firmware) == 'efi' %}
+    <type arch='{{ vm.arch | default(vm_default_arch) }}'>hvm</type>
+{% set _firmware = vm.firmware if vm.firmware | default('') | length > 0 else vm_default_firmware_linux %}
+{% if _firmware == 'efi' %}
     <loader readonly='yes' type='pflash'>{{ ovmf_code_linux | default(ovmf_code) }}</loader>
     <nvram template='{{ ovmf_vars_linux | default(ovmf_vars) }}'>{{ vm_images_dir }}/{{ vm.name }}-OVMF_VARS.fd</nvram>
 {% endif %}
@@ -34,30 +35,20 @@
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2' cache='none' io='native'/>
       <source file='{{ vm_images_dir }}/{{ vm.name }}.qcow2'/>
-      <target dev='sda' bus='{{ vm.disk_bus | default(vm_default_disk_bus_linux) }}'/>
+      <target dev='vda' bus='virtio'/>
       <boot order='1'/>
     </disk>
 {% if vm.data_disk_gb is defined and vm.data_disk_gb | int > 0 %}
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2' cache='none' io='native'/>
       <source file='{{ vm_images_dir }}/{{ vm.name }}-data.qcow2'/>
-      <target dev='sdb' bus='{{ vm.disk_bus | default(vm_default_disk_bus_linux) }}'/>
+      <target dev='vdb' bus='virtio'/>
     </disk>
 {% endif %}
-{% if vm.disk_bus | default(vm_default_disk_bus_linux) == 'scsi' %}
-    <controller type='scsi' model='virtio-scsi' index='0'/>
-{% endif %}
-    <controller type='usb' model='qemu-xhci' index='0'/>
-    <controller type='pci' model='pcie-root'/>
-    <controller type='pci' model='pcie-root-port'/>
-    <controller type='pci' model='pcie-root-port'/>
-    <controller type='pci' model='pcie-root-port'/>
-    <controller type='pci' model='pcie-root-port'/>
-    <controller type='sata' index='0'/>
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
       <source file='{{ vm_images_dir }}/{{ vm.name }}-seed.iso'/>
-      <target dev='sdc' bus='sata'/>
+      <target dev='hdc' bus='ide'/>
       <readonly/>
     </disk>
     <interface type='bridge'>
@@ -71,28 +62,13 @@
     <console type='pty'>
       <target type='serial' port='0'/>
     </console>
-{% if vm.tpm | default(vm_default_tpm) %}
-    <tpm model='tpm-crb'>
-      <backend type='emulator' version='2.0'/>
-    </tpm>
-{% endif %}
-    <input type='tablet' bus='usb'/>
-    <input type='keyboard' bus='usb'/>
-    <graphics type='{{ vm.graphics_type | default(vm_default_graphics_type) }}' autoport='yes' listen='{{ vm.graphics_listen | default(vm_default_graphics_listen) }}'>
-      <listen type='address' address='{{ vm.graphics_listen | default(vm_default_graphics_listen) }}'/>
-      <image compression='auto_glz'/>
-      <streaming mode='filter'/>
-    </graphics>
+    <graphics type='vnc' autoport='yes' listen='127.0.0.1'/>
     <video>
-      <model type='{{ vm.video_model | default(vm_default_video_model) }}' ram='65536' vram='65536' vgamem='16384' heads='1'/>
+      <model type='cirrus' vram='16384' heads='1'/>
     </video>
-{% if vm.memballoon | default(vm_default_memballoon) %}
     <memballoon model='virtio'/>
-{% endif %}
-{% if vm.rng | default(vm_default_rng) %}
     <rng model='virtio'>
       <backend model='random'>/dev/urandom</backend>
     </rng>
-{% endif %}
   </devices>
 </domain>

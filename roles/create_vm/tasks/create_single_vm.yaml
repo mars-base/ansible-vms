@@ -34,28 +34,37 @@
         dest: "{{ vm_images_dir }}/{{ vm.name }}-OVMF_VARS.fd"
         remote_src: true
         mode: "0644"
-      when: vm.firmware | default(vm_default_firmware) == 'efi'
+      when: (vm.firmware | default('')) | length > 0 and vm.firmware == 'efi'
 
     # Linux cloud-init: generate seed ISO
+    - name: "Create cloud-init directory for {{ vm.name }}"
+      file:
+        path: "/tmp/{{ vm.name }}-cloudinit"
+        state: directory
+        mode: "0755"
+      when: vm.type | default('linux') == 'linux'
+
     - name: "Generate cloud-init user-data for {{ vm.name }}"
       template:
         src: user-data.j2
-        dest: "/tmp/{{ vm.name }}-user-data"
+        dest: "/tmp/{{ vm.name }}-cloudinit/user-data"
         mode: "0644"
       when: vm.type | default('linux') == 'linux'
 
     - name: "Generate cloud-init meta-data for {{ vm.name }}"
       template:
         src: meta-data.j2
-        dest: "/tmp/{{ vm.name }}-meta-data"
+        dest: "/tmp/{{ vm.name }}-cloudinit/meta-data"
         mode: "0644"
       when: vm.type | default('linux') == 'linux'
 
     - name: "Generate cloud-init ISO for {{ vm.name }}"
       shell: |
+        cd /tmp/{{ vm.name }}-cloudinit && \
         genisoimage -output {{ vm_images_dir }}/{{ vm.name }}-seed.iso \
+          -input-charset utf-8 \
           -volid cidata -joliet -rock \
-          /tmp/{{ vm.name }}-user-data /tmp/{{ vm.name }}-meta-data
+          user-data meta-data
       args:
         creates: "{{ vm_images_dir }}/{{ vm.name }}-seed.iso"
       when: vm.type | default('linux') == 'linux'

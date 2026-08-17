@@ -15,15 +15,32 @@ users:
     lock_passwd: false
     plain_text_passwd: "{{ _password }}"
 {% endif %}
-{% if vm.cloud_init_ssh_authorized_keys is defined and vm.cloud_init_ssh_authorized_keys | length > 0 %}
+{% set _ssh_keys = vm.cloud_init_ssh_authorized_keys | default(vm_cloud_init_ssh_authorized_keys, true) | default([], true) %}
+{% if _ssh_keys | length > 0 %}
     ssh_authorized_keys:
-{% for key in vm.cloud_init_ssh_authorized_keys %}
+{% for key in _ssh_keys %}
       - "{{ key }}"
 {% endfor %}
 {% endif %}
 
 ssh_pwauth: {{ 'true' if _password != '' else 'false' }}
 disable_root: false
+
+write_files:
+{% if _password != '' %}
+  - path: /etc/ssh/sshd_config.d/99-cloud-init-password.conf
+    content: |
+      PasswordAuthentication yes
+      PermitRootLogin yes
+{% endif %}
+{% if vm.cloud_init_ssh_authorized_keys is defined and vm.cloud_init_ssh_authorized_keys | length > 0 %}
+  - path: /root/.ssh/authorized_keys
+    content: |
+{% for key in vm.cloud_init_ssh_authorized_keys %}
+      {{ key }}
+{% endfor %}
+    permissions: "0600"
+{% endif %}
 
 package_update: true
 package_upgrade: false
@@ -35,3 +52,4 @@ packages:
 runcmd:
   - systemctl enable qemu-guest-agent
   - systemctl start qemu-guest-agent
+  - systemctl restart ssh

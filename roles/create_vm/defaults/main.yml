@@ -16,6 +16,8 @@ qemu_emulator: /usr/bin/qemu-system-x86_64
 vm_default_arch: x86_64
 vm_default_machine: q35
 vm_default_firmware: efi
+vm_default_firmware_linux: bios
+vm_default_firmware_windows: efi
 
 # Clock: windows=localtime, linux=utc
 vm_default_clock_offset_linux: utc
