@@ -2,8 +2,7 @@
 
 # Start virtual machines
 # Usage:
-#   ap playbooks/start-vm.yaml                    # start all VMs
-#   ap playbooks/start-vm.yaml -e vm_name=win11-aifs  # start specific VM
+#   ap playbooks/start-vm.yaml -e vm_name=win11-aifs
 
 - name: Start virtual machines
   gather_facts: false
@@ -12,32 +11,31 @@
   become_user: root
   become_method: sudo
   tasks:
+    - name: Check vm_name is specified
+      assert:
+        that: vm_name is defined and vm_name != ''
+        fail_msg: "vm_name is required. Usage: -e vm_name=<name>"
+
     - name: Read vms.csv
       read_csv:
         path: "{{ vm_csv_file | default(inventory_dir + '/vms.csv') }}"
       register: _vms_csv
       delegate_to: localhost
 
-    - name: Filter VMs for this host
+    - name: Filter VM by name
       set_fact:
-        _vms: "{{ _vms_csv.list | selectattr('host', 'equalto', inventory_hostname) | list }}"
+        _vms: "{{ _vms_csv.list | selectattr('host', 'equalto', inventory_hostname) | selectattr('name', 'equalto', vm_name) | list }}"
 
-    - name: Filter by vm_name if specified
-      set_fact:
-        _vms: "{{ _vms | selectattr('name', 'equalto', vm_name) | list }}"
-      when: vm_name is defined
+    - name: Check VM found
+      assert:
+        that: _vms | length > 0
+        fail_msg: "VM '{{ vm_name }}' not found in vms.csv for host '{{ inventory_hostname }}'"
 
     - name: Check VM state
-      shell: virsh domstate {{ item.name }}
+      shell: virsh domstate {{ _vms[0].name }}
       register: _vm_state
       changed_when: false
-      loop: "{{ _vms }}"
-      loop_control:
-        label: "{{ item.name }}"
 
     - name: Start VM
-      shell: virsh start {{ item.item.name }}
-      when: item.stdout != 'running'
-      loop: "{{ _vm_state.results }}"
-      loop_control:
-        label: "{{ item.item.name }}"
+      shell: virsh start {{ _vms[0].name }}
+      when: _vm_state.stdout != 'running'
