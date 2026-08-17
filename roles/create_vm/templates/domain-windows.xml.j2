@@ -13,7 +13,6 @@
   <features>
     <acpi/>
     <apic/>
-{% if vm.type | default('linux') == 'windows' %}
     <hyperv>
       <relaxed state='on'/>
       <vapic state='on'/>
@@ -27,21 +26,16 @@
       <reenlightenment state='on'/>
       <tlbflush state='on'/>
     </hyperv>
-{% endif %}
   </features>
   <cpu mode='host-passthrough' check='none' migratable='on'>
     <topology sockets='1' dies='1' cores='{{ vm.vcpus }}' threads='1'/>
-{% if vm.type | default('linux') == 'windows' %}
     <feature policy='require' name='vmx'/>
-{% endif %}
   </cpu>
-  <clock offset='{{ vm.clock_offset | default(lookup("vars", "vm_default_clock_offset_" + vm.type | default("linux"), default="utc")) }}'>
+  <clock offset='{{ vm.clock_offset | default(vm_default_clock_offset_windows) }}'>
     <timer name='rtc' tickpolicy='catchup'/>
     <timer name='pit' tickpolicy='delay'/>
     <timer name='hpet' present='no'/>
-{% if vm.type | default('linux') == 'windows' %}
     <timer name='hypervclock' present='yes'/>
-{% endif %}
   </clock>
   <on_poweroff>{{ vm.poweroff_action | default(vm_default_poweroff_action) }}</on_poweroff>
   <on_reboot>{{ vm.reboot_action | default(vm_default_reboot_action) }}</on_reboot>
@@ -55,17 +49,17 @@
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2' cache='none' io='native'/>
       <source file='{{ vm_images_dir }}/{{ vm.name }}.qcow2'/>
-      <target dev='vda' bus='{{ vm.disk_bus | default(lookup("vars", "vm_default_disk_bus_" + vm.type | default("linux"), default="virtio")) }}'/>
+      <target dev='sda' bus='{{ vm.disk_bus | default(vm_default_disk_bus_windows) }}'/>
       <boot order='1'/>
     </disk>
 {% if vm.data_disk_gb is defined and vm.data_disk_gb | int > 0 %}
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2' cache='none' io='native'/>
       <source file='{{ vm_images_dir }}/{{ vm.name }}-data.qcow2'/>
-      <target dev='vdb' bus='{{ vm.disk_bus | default(lookup("vars", "vm_default_disk_bus_" + vm.type | default("linux"), default="virtio")) }}'/>
+      <target dev='sdb' bus='{{ vm.disk_bus | default(vm_default_disk_bus_windows) }}'/>
     </disk>
 {% endif %}
-    <controller type='{{ vm.disk_bus | default(lookup("vars", "vm_default_disk_bus_" + vm.type | default("linux"), default="virtio")) }}' model='virtio-{{ vm.disk_bus | default(lookup("vars", "vm_default_disk_bus_" + vm.type | default("linux"), default="virtio")) }}' index='0'/>
+    <controller type='{{ vm.disk_bus | default(vm_default_disk_bus_windows) }}' model='virtio-{{ vm.disk_bus | default(vm_default_disk_bus_windows) }}' index='0'/>
     <controller type='usb' model='qemu-xhci' index='0'/>
     <controller type='pci' model='pcie-root'/>
     <controller type='pci' model='pcie-root-port'/>
@@ -75,10 +69,7 @@
     <controller type='sata' index='0'/>
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
-{% if vm.type | default('linux') == 'linux' %}
-      <source file='{{ vm_images_dir }}/{{ vm.name }}-seed.iso'/>
-{% endif %}
-      <target dev='sr0' bus='sata'/>
+      <target dev='sdc' bus='sata'/>
       <readonly/>
     </disk>
     <interface type='bridge'>

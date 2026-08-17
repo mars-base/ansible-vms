@@ -1,0 +1,96 @@
+<domain type='kvm'>
+  <name>{{ vm.name }}</name>
+  <memory unit='KiB'>{{ vm.memory_mb | int * 1024 }}</memory>
+  <currentMemory unit='KiB'>{{ vm.memory_mb | int * 1024 }}</currentMemory>
+  <vcpu placement='static'>{{ vm.vcpus }}</vcpu>
+  <os>
+    <type arch='{{ vm.arch | default(vm_default_arch) }}' machine='{{ vm.machine | default(vm_default_machine) }}'>hvm</type>
+{% if vm.firmware | default(vm_default_firmware) == 'efi' %}
+    <loader readonly='yes' type='pflash'>{{ ovmf_code }}</loader>
+    <nvram template='{{ ovmf_vars }}'>{{ vm_images_dir }}/{{ vm.name }}-OVMF_VARS.fd</nvram>
+{% endif %}
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <cpu mode='host-passthrough' check='none' migratable='on'>
+    <topology sockets='1' dies='1' cores='{{ vm.vcpus }}' threads='1'/>
+  </cpu>
+  <clock offset='{{ vm.clock_offset | default(vm_default_clock_offset_linux) }}'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+  </clock>
+  <on_poweroff>{{ vm.poweroff_action | default(vm_default_poweroff_action) }}</on_poweroff>
+  <on_reboot>{{ vm.reboot_action | default(vm_default_reboot_action) }}</on_reboot>
+  <on_crash>{{ vm.crash_action | default(vm_default_crash_action) }}</on_crash>
+  <pm>
+    <suspend-to-mem enabled='no'/>
+    <suspend-to-disk enabled='no'/>
+  </pm>
+  <devices>
+    <emulator>{{ qemu_emulator }}</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='none' io='native'/>
+      <source file='{{ vm_images_dir }}/{{ vm.name }}.qcow2'/>
+      <target dev='vda' bus='{{ vm.disk_bus | default(vm_default_disk_bus_linux) }}'/>
+      <boot order='1'/>
+    </disk>
+{% if vm.data_disk_gb is defined and vm.data_disk_gb | int > 0 %}
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='none' io='native'/>
+      <source file='{{ vm_images_dir }}/{{ vm.name }}-data.qcow2'/>
+      <target dev='vdb' bus='{{ vm.disk_bus | default(vm_default_disk_bus_linux) }}'/>
+    </disk>
+{% endif %}
+    <controller type='{{ vm.disk_bus | default(vm_default_disk_bus_linux) }}' model='virtio-{{ vm.disk_bus | default(vm_default_disk_bus_linux) }}' index='0'/>
+    <controller type='usb' model='qemu-xhci' index='0'/>
+    <controller type='pci' model='pcie-root'/>
+    <controller type='pci' model='pcie-root-port'/>
+    <controller type='pci' model='pcie-root-port'/>
+    <controller type='pci' model='pcie-root-port'/>
+    <controller type='pci' model='pcie-root-port'/>
+    <controller type='sata' index='0'/>
+    <disk type='file' device='cdrom'>
+      <driver name='qemu' type='raw'/>
+      <source file='{{ vm_images_dir }}/{{ vm.name }}-seed.iso'/>
+      <target dev='sr0' bus='sata'/>
+      <readonly/>
+    </disk>
+    <interface type='bridge'>
+      <mac address='{{ vm.mac }}'/>
+      <source bridge='{{ vm.bridge }}'/>
+      <model type='{{ vm.nic_model | default(vm_default_nic_model) }}'/>
+    </interface>
+    <serial type='pty'>
+      <target type='isa-serial' port='0'/>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+{% if vm.tpm | default(vm_default_tpm) %}
+    <tpm model='tpm-crb'>
+      <backend type='emulator' version='2.0'/>
+    </tpm>
+{% endif %}
+    <input type='tablet' bus='usb'/>
+    <input type='keyboard' bus='usb'/>
+    <graphics type='{{ vm.graphics_type | default(vm_default_graphics_type) }}' autoport='yes' listen='{{ vm.graphics_listen | default(vm_default_graphics_listen) }}'>
+      <listen type='address' address='{{ vm.graphics_listen | default(vm_default_graphics_listen) }}'/>
+      <image compression='auto_glz'/>
+      <streaming mode='filter'/>
+    </graphics>
+    <video>
+      <model type='{{ vm.video_model | default(vm_default_video_model) }}' ram='65536' vram='65536' vgamem='16384' heads='1'/>
+    </video>
+{% if vm.memballoon | default(vm_default_memballoon) %}
+    <memballoon model='virtio'/>
+{% endif %}
+{% if vm.rng | default(vm_default_rng) %}
+    <rng model='virtio'>
+      <backend model='random'>/dev/urandom</backend>
+    </rng>
+{% endif %}
+  </devices>
+</domain>

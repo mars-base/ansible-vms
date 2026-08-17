@@ -62,7 +62,7 @@
 
     - name: "Generate domain XML for {{ vm.name }}"
       template:
-        src: domain.xml.j2
+        src: "domain-{{ vm.type | default('linux') }}.xml.j2"
         dest: "/tmp/{{ vm.name }}.xml"
         mode: "0644"
 
