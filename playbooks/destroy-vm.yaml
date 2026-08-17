@@ -1,0 +1,88 @@
+---
+
+# Destroy virtual machines (permanently delete)
+# Usage:
+#   ap playbooks/destroy-vm.yaml -e vm_name=win11-aifs --confirm
+
+- name: Destroy virtual machines
+  gather_facts: false
+  hosts: "{{ HOSTS | default('kvm_hosts') }}"
+  become: true
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: Check vm_name is specified
+      assert:
+        that: vm_name is defined and vm_name != ''
+        fail_msg: "vm_name is required. Usage: -e vm_name=<name>"
+
+    - name: Read vms.csv
+      read_csv:
+        path: "{{ vm_csv_file | default(inventory_dir + '/vms.csv') }}"
+      register: _vms_csv
+      delegate_to: localhost
+
+    - name: Filter VM by name
+      set_fact:
+        _vms: "{{ _vms_csv.list | selectattr('host', 'equalto', inventory_hostname) | selectattr('name', 'equalto', vm_name) | list }}"
+
+    - name: Check VM found
+      assert:
+        that: _vms | length > 0
+        fail_msg: "VM '{{ vm_name }}' not found in vms.csv for host '{{ inventory_hostname }}'"
+
+    - name: Check if VM is defined in libvirt
+      shell: virsh domstate {{ _vms[0].name }} 2>/dev/null
+      register: _vm_check
+      failed_when: false
+      changed_when: false
+
+    - name: Check confirm flag
+      assert:
+        that: confirm | default(false) | bool
+        fail_msg: "Destructive operation. Add --confirm to proceed: -e confirm=true"
+
+    - name: Stop VM if running
+      when: _vm_check.rc == 0
+      block:
+        - name: Check VM state
+          shell: virsh domstate {{ _vms[0].name }}
+          register: _vm_state
+          changed_when: false
+
+        - name: Shutdown VM
+          shell: virsh shutdown {{ _vms[0].name }}
+          when: _vm_state.stdout == 'running'
+
+        - name: Wait for VM to stop
+          shell: virsh domstate {{ _vms[0].name }}
+          register: _vm_state_wait
+          until: _vm_state_wait.stdout == 'shut off'
+          retries: 30
+          delay: 2
+          changed_when: false
+          when: _vm_state.stdout == 'running'
+
+        - name: Undefine VM
+          shell: virsh undefine {{ _vms[0].name }} --nvram
+          register: _undefine
+
+    - name: Set storage paths
+      set_fact:
+        _images_dir: "{{ vm_images_dir | default('/var/lib/libvirt/images') }}"
+
+    - name: Delete VM disk files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ _images_dir }}/{{ _vms[0].name }}.qcow2"
+        - "{{ _images_dir }}/{{ _vms[0].name }}-data.qcow2"
+        - "{{ _images_dir }}/{{ _vms[0].name }}-OVMF_VARS.fd"
+        - "{{ _images_dir }}/{{ _vms[0].name }}-seed.iso"
+      register: _delete_files
+
+    - name: Show result
+      debug:
+        msg: "VM '{{ _vms[0].name }}' has been destroyed"
+      when: _undefine is changed or _delete_files is changed
