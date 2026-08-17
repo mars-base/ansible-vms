@@ -1,0 +1,43 @@
+---
+
+# Restart virtual machines
+# Usage:
+#   ap playbooks/restart-vm.yaml                      # restart all VMs
+#   ap playbooks/restart-vm.yaml -e vm_name=win11-aifs   # restart specific VM
+
+- name: Restart virtual machines
+  gather_facts: false
+  hosts: "{{ HOSTS | default('kvm_hosts') }}"
+  become: true
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: Read vms.csv
+      read_csv:
+        path: "{{ vm_csv_file | default(inventory_dir + '/vms.csv') }}"
+      register: _vms_csv
+      delegate_to: localhost
+
+    - name: Filter VMs for this host
+      set_fact:
+        _vms: "{{ _vms_csv.list | selectattr('host', 'equalto', inventory_hostname) | list }}"
+
+    - name: Filter by vm_name if specified
+      set_fact:
+        _vms: "{{ _vms | selectattr('name', 'equalto', vm_name) | list }}"
+      when: vm_name is defined
+
+    - name: Check VM state
+      shell: virsh domstate {{ item.name }}
+      register: _vm_state
+      changed_when: false
+      loop: "{{ _vms }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Restart VM
+      shell: virsh reboot {{ item.item.name }}
+      when: item.stdout == 'running'
+      loop: "{{ _vm_state.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
