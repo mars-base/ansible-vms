@@ -150,6 +150,44 @@ ip neigh show dev br0 | grep -i <MAC>
 
 Or use the `list-vms` playbook which does this automatically.
 
+### Bridge Configuration
+
+The KVM host requires a network bridge (`br0`) so VMs can access the LAN directly. Example `/etc/network/interfaces`:
+
+```bash
+# Physical NIC — manual mode, no IP (managed by bridge)
+auto eth0
+iface eth0 inet manual
+    pre-up ip link set $IFACE up
+    post-down ip link set $IFACE down
+
+# Bridge br0 — static IP, bridges eth0
+auto br0
+iface br0 inet static
+    address 192.168.1.100
+    netmask 255.255.255.0
+    gateway 192.168.1.1
+    dns-nameservers 8.8.8.8 8.8.4.4
+    bridge_ports eth0
+    bridge_stp off
+    bridge_fd 0
+    bridge_maxwait 0
+```
+
+Replace `eth0` with your actual NIC name (check with `ip link`). After editing:
+
+```bash
+sudo systemctl restart networking
+```
+
+Verify the bridge is up:
+
+```bash
+ip addr show br0
+bridge link show
+```
+
+
 ## Custom Storage Path
 
 By default, VM files are stored in `/var/lib/libvirt/images`. You can customize the storage path per-VM using the `storage_dir` field in `vms.csv`:
