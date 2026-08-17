@@ -6,7 +6,7 @@
   <os>
     <type arch='{{ vm.arch | default(vm_default_arch) }}'>hvm</type>
 {% set _firmware = vm.firmware if vm.firmware | default('') | length > 0 else vm_default_firmware_linux %}
-{% set _storage = vm.storage_dir if vm.storage_dir | default('') | length > 0 else vm_images_dir %}
+{% set _storage = (vm.storage_dir if vm.storage_dir | default('') | length > 0 else vm_images_dir) ~ '/' ~ vm.name %}
 {% if _firmware == 'efi' %}
     <loader readonly='yes' type='pflash'>{{ ovmf_code_linux | default(ovmf_code) }}</loader>
     <nvram template='{{ ovmf_vars_linux | default(ovmf_vars) }}'>{{ _storage }}/{{ vm.name }}-OVMF_VARS.fd</nvram>

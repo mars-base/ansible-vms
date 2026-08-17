@@ -16,14 +16,13 @@
   block:
     - name: "Set storage directory for {{ vm.name }}"
       set_fact:
-        _vm_storage_dir: "{{ vm.storage_dir if vm.storage_dir | default('') | length > 0 else vm_images_dir }}"
+        _vm_storage_dir: "{{ (vm.storage_dir if vm.storage_dir | default('') | length > 0 else vm_images_dir) }}/{{ vm.name }}"
 
     - name: "Create storage directory for {{ vm.name }}"
       file:
         path: "{{ _vm_storage_dir }}"
         state: directory
         mode: "0755"
-      when: _vm_storage_dir != vm_images_dir
 
     - name: "Create qcow2 overlay for {{ vm.name }}"
       shell: |

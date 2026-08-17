@@ -160,26 +160,27 @@ my-linux-vm,local,linux,...,/data/vms
 ```
 
 When `storage_dir` is specified:
-- The directory is automatically created if it doesn't exist
-- VM files (qcow2, seed ISO, OVMF VARS) are stored in the custom path
-- The destroy playbook correctly locates and removes files from the custom path
+- A VM-specific subdirectory is automatically created: `<storage_dir>/<vm-name>/`
+- VM files (qcow2, seed ISO, OVMF VARS) are stored in the isolated subdirectory
+- The destroy playbook removes the entire VM subdirectory
 
-When `storage_dir` is empty, VMs use the default path `/var/lib/libvirt/images`.
+When `storage_dir` is empty, VMs use the default path `/var/lib/libvirt/images/<vm-name>/`.
 
 **Example:**
 ```bash
-# VM with custom storage path
-ls /data/vms/my-linux-vm*
-# Output: my-linux-vm.qcow2  my-linux-vm-seed.iso
+# VM with custom storage path (isolated in subdirectory)
+ls /data/vms/my-linux-vm/
+# Output: my-linux-vm.qcow2  my-linux-vm-data.qcow2  my-linux-vm-seed.iso
 
-# VM with default storage path
-ls /var/lib/libvirt/images/other-vm*
+# VM with default storage path (also isolated)
+ls /var/lib/libvirt/images/other-vm/
 # Output: other-vm.qcow2  other-vm-seed.iso
 ```
 
 This is useful when you want to:
 - Store VMs on faster storage (SSD/NVMe)
 - Use separate storage pools for different environments
+- Isolate VM files for better organization and management
 - Integrate with ZFS/LVM storage management
 
 ## Data Disk

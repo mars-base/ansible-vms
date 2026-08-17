@@ -69,17 +69,12 @@
 
     - name: Set storage path
       set_fact:
-        _storage_dir: "{{ _vms[0].storage_dir if _vms[0].storage_dir | default('') | length > 0 else vm_images_dir | default('/var/lib/libvirt/images') }}"
+        _storage_dir: "{{ (_vms[0].storage_dir if _vms[0].storage_dir | default('') | length > 0 else vm_images_dir | default('/var/lib/libvirt/images')) }}/{{ _vms[0].name }}"
 
-    - name: Delete VM disk files
+    - name: Delete VM storage directory
       file:
-        path: "{{ item }}"
+        path: "{{ _storage_dir }}"
         state: absent
-      loop:
-        - "{{ _storage_dir }}/{{ _vms[0].name }}.qcow2"
-        - "{{ _storage_dir }}/{{ _vms[0].name }}-data.qcow2"
-        - "{{ _storage_dir }}/{{ _vms[0].name }}-OVMF_VARS.fd"
-        - "{{ _storage_dir }}/{{ _vms[0].name }}-seed.iso"
       register: _delete_files
 
     - name: Show result
