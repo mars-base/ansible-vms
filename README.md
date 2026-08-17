@@ -245,6 +245,31 @@ mount /dev/vdb /data
 
 Set `data_disk_gb=0` (or leave empty) for VMs without a data disk.
 
+## Linux Base Image
+
+The Linux VMs use the official Debian 12 (Bookworm) generic cloud image. This image is pre-configured with cloud-init support and works out-of-the-box with this project.
+
+**Download the latest image:**
+
+```bash
+wget https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2
+```
+
+**Alternative (archived versions):**
+
+```bash
+# Browse specific versions at:
+# https://cdimage.debian.org/cdimage/cloud/bookworm/
+```
+
+Then set the path in `vms.csv` `base_image` field:
+
+```csv
+my-linux-vm,local,linux,...,/path/to/debian-12-genericcloud-amd64.qcow2,...
+```
+
+The image is automatically configured via cloud-init on first boot (SSH keys, user, packages, etc. from `group_vars/kvm_hosts/vms_all.yaml`).
+
 ## Windows Base Image
 
 The Windows qcow2 base image is built with [packer-windows-kubevirt](https://github.com/mars-base/packer-windows-kubevirt). It uses Packer + QEMU to produce a sysprep-generalized Windows image with:
