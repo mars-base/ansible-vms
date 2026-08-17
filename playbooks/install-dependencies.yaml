@@ -5,7 +5,7 @@
   hosts: "{{ hosts | default('all') }}"
   become: true
   vars:
-    packages:
+    base_packages:
       - vim
       - curl
       - wget
@@ -16,6 +16,18 @@
       - net-tools
       - ca-certificates
       - software-properties-common
+    kvm_packages:
+      - qemu-kvm
+      - qemu-utils
+      - libvirt-daemon-system
+      - libvirt-clients
+      - ovmf
+      - swtpm
+      - virtinst
+      - virt-viewer
+      - bridge-utils
+      - cloud-image-utils
+      - genisoimage
 
   tasks:
     - name: Update apt cache
@@ -24,20 +36,33 @@
         cache_valid_time: 3600
       when: ansible_os_family == "Debian"
 
-    - name: Install packages (Debian/Ubuntu)
+    - name: Install base packages
       apt:
-        name: "{{ packages }}"
+        name: "{{ base_packages }}"
         state: present
       when: ansible_os_family == "Debian"
 
-    - name: Install packages (RedHat/CentOS)
+    - name: Install KVM packages
+      apt:
+        name: "{{ kvm_packages }}"
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Enable and start libvirtd
+      service:
+        name: libvirtd
+        state: started
+        enabled: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install base packages (RedHat/CentOS)
       yum:
-        name: "{{ packages }}"
+        name: "{{ base_packages }}"
         state: present
       when: ansible_os_family == "RedHat"
 
-    - name: Install packages (Alpine)
+    - name: Install base packages (Alpine)
       apk:
-        name: "{{ packages }}"
+        name: "{{ base_packages }}"
         state: present
       when: ansible_os_family == "Alpine"
