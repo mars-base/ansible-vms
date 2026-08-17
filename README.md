@@ -33,10 +33,10 @@ ansible-vms/
 
 ```bash
 # 1. Setup
-cp ansible.cfg.example ansible.cfg
-cp hosts.ini.example hosts.ini
+cp ansible.cfg.example ansible.cfg  # edit with your host name
+cp hosts.ini.example hosts.ini  # edit with your host name
 cp vms.csv.example vms.csv    # edit with your VM definitions
-uv sync
+uv sync  # install ansible dependencies
 
 # 2. Create VMs defined in vms.csv
 ap playbooks/create-vm.yaml
