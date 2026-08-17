@@ -4,28 +4,91 @@
 # Copy to vms_all.yaml and edit
 #
 # These are default values used when fields in vms.csv are empty.
-# Adjust according to your environment.
-
-# Default VM specifications (used when not specified in vms.csv)
-vm_default_vcpus: 2
-vm_default_memory_mb: 4096
-vm_default_disk_gb: 50
-vm_default_os: ubuntu22.04
+# Most defaults are defined in roles/create_vm/defaults/main.yml
+# This file allows you to override them per-environment.
 
 # VM image storage paths
 # vm_images_dir: default directory for VM files (each VM gets a subdirectory)
-# vm_templates_dir: directory for base/template images
+# vm_csv_file: path to VM definitions CSV
 vm_images_dir: /var/lib/libvirt/images
-vm_templates_dir: /srv/vm-templates
+vm_csv_file: "{{ inventory_dir }}/vms.csv"
 
-# Network configuration
-# vm_default_network: libvirt network name (for NAT mode)
-# vm_default_bridge: bridge name (for bridge mode, VMs get LAN IP)
-vm_default_network: default
-vm_default_bridge: virbr0
+# OVMF firmware paths
+# Secure Boot variant (Windows)
+ovmf_code_ms: /usr/share/OVMF/OVMF_CODE.ms.fd
+ovmf_vars_ms: /usr/share/OVMF/OVMF_VARS.ms.fd
+# Standard variant (Linux)
+ovmf_code: /usr/share/OVMF/OVMF_CODE.fd
+ovmf_vars: /usr/share/OVMF/OVMF_VARS.fd
 
-# SSH key configuration
-# vm_ssh_key_type: key algorithm (ed25519 recommended for speed/security)
-# vm_ssh_key_path: path to SSH private key for remote host connections
-vm_ssh_key_type: ed25519
-vm_ssh_key_path: ~/.ssh/id_ed25519
+# QEMU emulator path
+qemu_emulator: /usr/bin/qemu-system-x86_64
+
+# Architecture defaults
+# vm_default_arch: CPU architecture (x86_64, aarch64)
+# vm_default_machine: machine type (q35 for modern, pc for legacy)
+# vm_default_firmware: default firmware when not specified in vms.csv
+# vm_default_firmware_linux: Linux default (bios recommended for simplicity)
+# vm_default_firmware_windows: Windows default (efi required for Secure Boot)
+vm_default_arch: x86_64
+vm_default_machine: q35
+vm_default_firmware: efi
+vm_default_firmware_linux: bios
+vm_default_firmware_windows: efi
+
+# Clock configuration
+# vm_default_clock_offset_linux: UTC (standard for servers)
+# vm_default_clock_offset_windows: localtime (matches host timezone)
+vm_default_clock_offset_linux: utc
+vm_default_clock_offset_windows: localtime
+
+# Power management actions
+# vm_default_poweroff_action: what to do on poweroff (destroy = stop VM)
+# vm_default_reboot_action: what to do on reboot (restart = reboot VM)
+# vm_default_crash_action: what to do on crash (destroy = stop VM)
+vm_default_poweroff_action: destroy
+vm_default_reboot_action: restart
+vm_default_crash_action: destroy
+
+# Disk and NIC defaults
+# vm_default_disk_bus_linux: virtio (virtio-blk, best performance)
+# vm_default_disk_bus_windows: scsi (virtio-scsi, better Windows compatibility)
+# vm_default_nic_model: virtio (best performance, requires drivers)
+vm_default_disk_bus_linux: virtio
+vm_default_disk_bus_windows: scsi
+vm_default_nic_model: virtio
+
+# Graphics configuration (Windows VMs)
+# vm_default_graphics_type: spice (recommended) or vnc
+# vm_default_graphics_listen: listen address (127.0.0.1 for local only)
+# vm_default_video_model: qxl (SPICE) or cirrus (VNC)
+vm_default_graphics_type: spice
+vm_default_graphics_listen: 127.0.0.1
+vm_default_video_model: qxl
+
+# Device defaults
+# vm_default_tpm: enable TPM 2.0 (required for Windows 11)
+# vm_default_memballoon: enable memory balloon (dynamic memory)
+# vm_default_rng: enable hardware random number generator
+vm_default_tpm: true
+vm_default_memballoon: true
+vm_default_rng: true
+
+# Cloud-init defaults for Linux VMs
+# These apply to all Linux VMs unless overridden in group_vars/kvm_hosts/vms_all.yaml
+# vm_cloud_init_user: default user (root for direct access)
+# vm_cloud_init_ssh_password: SSH password (empty = disabled)
+# vm_cloud_init_timezone: timezone (tz database)
+# vm_cloud_init_locale: system locale
+# vm_cloud_init_packages: packages to install on first boot
+vm_cloud_init_user: root
+vm_cloud_init_ssh_password: ""
+vm_cloud_init_timezone: Asia/Shanghai
+vm_cloud_init_locale: en_US.UTF-8
+vm_cloud_init_packages:
+  - qemu-guest-agent
+  - curl
+  - wget
+  - vim
+  - htop
+  - git
