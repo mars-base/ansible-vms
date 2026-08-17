@@ -149,6 +149,38 @@ ip neigh show dev br0 | grep -i <MAC>
 
 Or use the `list-vms` playbook which does this automatically.
 
+## Custom Storage Path
+
+By default, VM files are stored in `/var/lib/libvirt/images`. You can customize the storage path per-VM using the `storage_dir` field in `vms.csv`:
+
+```csv
+name,host,type,...,storage_dir
+my-linux-vm,local,linux,...,/data/vms
+```
+
+When `storage_dir` is specified:
+- The directory is automatically created if it doesn't exist
+- VM files (qcow2, seed ISO, OVMF VARS) are stored in the custom path
+- The destroy playbook correctly locates and removes files from the custom path
+
+When `storage_dir` is empty, VMs use the default path `/var/lib/libvirt/images`.
+
+**Example:**
+```bash
+# VM with custom storage path
+ls /data/vms/my-linux-vm*
+# Output: my-linux-vm.qcow2  my-linux-vm-seed.iso
+
+# VM with default storage path
+ls /var/lib/libvirt/images/other-vm*
+# Output: other-vm.qcow2  other-vm-seed.iso
+```
+
+This is useful when you want to:
+- Store VMs on faster storage (SSD/NVMe)
+- Use separate storage pools for different environments
+- Integrate with ZFS/LVM storage management
+
 ## Windows Base Image
 
 The Windows qcow2 base image is built with [packer-windows-kubevirt](https://github.com/mars-base/packer-windows-kubevirt). It uses Packer + QEMU to produce a sysprep-generalized Windows image with:
