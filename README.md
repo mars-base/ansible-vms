@@ -2,6 +2,11 @@
 
 Ansible project for managing KVM virtual machines. VMs are defined in `vms.csv` and provisioned via libvirt domain XML templates.
 
+## Requirements
+
+- **Host OS**: Debian 12 (Bookworm)
+- **Packages**: `qemu-kvm`, `libvirt-daemon-system`, `libvirt-clients`, `ovmf`, `swtpm`
+
 ## Structure
 
 ```
