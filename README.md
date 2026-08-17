@@ -181,6 +181,30 @@ This is useful when you want to:
 - Use separate storage pools for different environments
 - Integrate with ZFS/LVM storage management
 
+## Data Disk
+
+Set `data_disk_gb` in `vms.csv` to attach an additional qcow2 disk to the VM:
+
+```csv
+my-linux-vm,local,linux,...,data_disk_gb=50,...
+```
+
+When `data_disk_gb > 0`:
+- A thin-provisioned qcow2 data disk is created (`<name>-data.qcow2`)
+- The disk is attached to the VM as a second virtio block device (`vdb` / `sdb`)
+- Stored in the same `storage_dir` as the system disk
+
+The data disk is **not** formatted or mounted automatically — you manage filesystem and mount inside the VM:
+
+```bash
+# Inside VM
+mkfs.ext4 /dev/vdb
+mkdir -p /data
+mount /dev/vdb /data
+```
+
+Set `data_disk_gb=0` (or leave empty) for VMs without a data disk.
+
 ## Windows Base Image
 
 The Windows qcow2 base image is built with [packer-windows-kubevirt](https://github.com/mars-base/packer-windows-kubevirt). It uses Packer + QEMU to produce a sysprep-generalized Windows image with:
