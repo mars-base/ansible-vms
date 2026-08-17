@@ -76,36 +76,37 @@ ap playbooks/list-vms.yaml
 
 Output example:
 ```
-win11-aifs           10.241.21.65    windows  4 vCPU 8192 MB    win11  shut off
-debian12-01          10.241.23.118   linux    2 vCPU 2048 MB    debian12 running
+win11-dev            192.168.1.101   windows  4 vCPU 8192 MB    win11  shut off
+win10-dev            192.168.1.102   windows  4 vCPU 8192 MB    win10  running
+debian12-dev         192.168.1.103   linux    2 vCPU 2048 MB    debian12 running
 ```
 
 ### Start VM
 
 ```bash
 # Start specific VM
-ap playbooks/start-vm.yaml -e vm_name=debian12-01
+ap playbooks/start-vm.yaml -e vm_name=debian12-dev
 ```
 
 ### Stop VM
 
 ```bash
 # Graceful shutdown
-ap playbooks/stop-vm.yaml -e vm_name=win11-aifs
+ap playbooks/stop-vm.yaml -e vm_name=win11-dev
 ```
 
 ### Restart VM
 
 ```bash
 # Stop then start VM
-ap playbooks/restart-vm.yaml -e vm_name=debian12-01
+ap playbooks/restart-vm.yaml -e vm_name=debian12-dev
 ```
 
 ### Destroy VM
 
 ```bash
 # Permanently delete VM (requires confirmation)
-ap playbooks/destroy-vm.yaml -e vm_name=win11-aifs -e confirm=true
+ap playbooks/destroy-vm.yaml -e vm_name=win11-dev -e confirm=true
 ```
 
 Deletes: domain definition, disk images (qcow2), OVMF VARS, cloud-init ISO, TPM state.
@@ -116,7 +117,7 @@ Deletes: domain definition, disk images (qcow2), OVMF VARS, cloud-init ISO, TPM 
 
 | Field | Description | Example |
 |-------|-------------|---------|
-| `name` | VM name | `win11-aifs` |
+| `name` | VM name | `win11-dev` |
 | `host` | KVM host (inventory name) | `local` |
 | `type` | OS type: `windows` / `linux` | `windows` |
 | `memory_mb` | Memory in MB | `8192` |
@@ -126,7 +127,7 @@ Deletes: domain definition, disk images (qcow2), OVMF VARS, cloud-init ISO, TPM 
 | `data_disk_gb` | Data disk size (0 for none) | `10` |
 | `base_image` | Base qcow2 image path | `/path/to/base.qcow2` |
 | `bridge` | Network bridge | `br0` |
-| `mac` | MAC address | `52:54:00:cc:68:2c` |
+| `mac` | MAC address | `52:54:00:xx:xx:xx` |
 | `firmware` | `efi` or empty (BIOS) | `efi` |
 | `autostart` | Auto-start on boot | `true` |
 | `storage_dir` | VM storage path (optional, default: `/var/lib/libvirt/images`) | `/data/vms` |
@@ -136,9 +137,9 @@ Deletes: domain definition, disk images (qcow2), OVMF VARS, cloud-init ISO, TPM 
 VMs connect to the local network via a **bridge** (default `br0`), receiving IP addresses from the LAN's DHCP server — same subnet as the host.
 
 ```
-LAN (10.241.20.0/22, DHCP, gateway 10.241.20.1)
-├── KVM Host (10.241.21.97, br0)
-└── VM (10.241.21.x, DHCP via br0, virtio NIC)
+LAN (192.168.1.0/24, DHCP, gateway 192.168.1.1)
+├── KVM Host (192.168.1.100, br0)
+└── VM (192.168.1.x, DHCP via br0, virtio NIC)
 ```
 
 Each VM is assigned a **pinned MAC address** in `vms.csv`, so its DHCP lease is stable. To look up a VM's IP:
