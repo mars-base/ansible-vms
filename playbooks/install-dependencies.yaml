@@ -1,0 +1,43 @@
+---
+# Install system dependencies playbook
+
+- name: Install system dependencies
+  hosts: "{{ hosts | default('all') }}"
+  become: true
+  vars:
+    packages:
+      - vim
+      - curl
+      - wget
+      - git
+      - htop
+      - tree
+      - unzip
+      - net-tools
+      - ca-certificates
+      - software-properties-common
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Install packages (Debian/Ubuntu)
+      apt:
+        name: "{{ packages }}"
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install packages (RedHat/CentOS)
+      yum:
+        name: "{{ packages }}"
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Install packages (Alpine)
+      apk:
+        name: "{{ packages }}"
+        state: present
+      when: ansible_os_family == "Alpine"
