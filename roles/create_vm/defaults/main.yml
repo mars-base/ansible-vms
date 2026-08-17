@@ -3,9 +3,12 @@
 vm_images_dir: /var/lib/libvirt/images
 vm_csv_file: "{{ inventory_dir }}/vms.csv"
 
-# OVMF firmware
-ovmf_code: /usr/share/OVMF/OVMF_CODE.ms.fd
-ovmf_vars: /usr/share/OVMF/OVMF_VARS.ms.fd
+# OVMF firmware - Secure Boot (Windows)
+ovmf_code_ms: /usr/share/OVMF/OVMF_CODE.ms.fd
+ovmf_vars_ms: /usr/share/OVMF/OVMF_VARS.ms.fd
+# OVMF firmware - Standard (Linux)
+ovmf_code: /usr/share/OVMF/OVMF_CODE.fd
+ovmf_vars: /usr/share/OVMF/OVMF_VARS.fd
 
 qemu_emulator: /usr/bin/qemu-system-x86_64
 
@@ -22,8 +25,8 @@ vm_default_poweroff_action: destroy
 vm_default_reboot_action: restart
 vm_default_crash_action: destroy
 
-# Disk/NIC: windows uses scsi, linux uses virtio
-vm_default_disk_bus_linux: scsi
+# Disk/NIC: windows uses scsi, linux uses virtio (virtio-blk)
+vm_default_disk_bus_linux: virtio
 vm_default_disk_bus_windows: scsi
 vm_default_nic_model: virtio
 

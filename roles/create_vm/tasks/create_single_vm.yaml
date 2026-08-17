@@ -30,7 +30,7 @@
 
     - name: "Copy OVMF VARS for {{ vm.name }}"
       copy:
-        src: "{{ ovmf_vars }}"
+        src: "{{ ovmf_vars_ms if vm.type | default('linux') == 'windows' else ovmf_vars }}"
         dest: "{{ vm_images_dir }}/{{ vm.name }}-OVMF_VARS.fd"
         remote_src: true
         mode: "0644"

@@ -6,8 +6,8 @@
   <os>
     <type arch='{{ vm.arch | default(vm_default_arch) }}' machine='{{ vm.machine | default(vm_default_machine) }}'>hvm</type>
 {% if vm.firmware | default(vm_default_firmware) == 'efi' %}
-    <loader readonly='yes' type='pflash'>{{ ovmf_code }}</loader>
-    <nvram template='{{ ovmf_vars }}'>{{ vm_images_dir }}/{{ vm.name }}-OVMF_VARS.fd</nvram>
+    <loader readonly='yes' type='pflash'>{{ ovmf_code_linux | default(ovmf_code) }}</loader>
+    <nvram template='{{ ovmf_vars_linux | default(ovmf_vars) }}'>{{ vm_images_dir }}/{{ vm.name }}-OVMF_VARS.fd</nvram>
 {% endif %}
   </os>
   <features>
@@ -44,7 +44,9 @@
       <target dev='sdb' bus='{{ vm.disk_bus | default(vm_default_disk_bus_linux) }}'/>
     </disk>
 {% endif %}
-    <controller type='{{ vm.disk_bus | default(vm_default_disk_bus_linux) }}' model='virtio-{{ vm.disk_bus | default(vm_default_disk_bus_linux) }}' index='0'/>
+{% if vm.disk_bus | default(vm_default_disk_bus_linux) == 'scsi' %}
+    <controller type='scsi' model='virtio-scsi' index='0'/>
+{% endif %}
     <controller type='usb' model='qemu-xhci' index='0'/>
     <controller type='pci' model='pcie-root'/>
     <controller type='pci' model='pcie-root-port'/>
