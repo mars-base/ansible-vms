@@ -61,6 +61,11 @@
       set_fact:
         _data_disk: "{{ _storage_dir }}/{{ _vms[0].name }}-data.qcow2"
 
+    - name: Set disk device and bus based on VM type
+      set_fact:
+        _disk_dev: "{{ 'sdb' if _vms[0].type | default('linux') == 'windows' else 'vdb' }}"
+        _disk_bus: "{{ 'scsi' if _vms[0].type | default('linux') == 'windows' else 'virtio' }}"
+
     - name: Check if data disk already attached
       shell: virsh domblklist {{ _vms[0].name }} | grep -q "data.qcow2"
       register: _disk_attached
@@ -77,14 +82,14 @@
         - name: Hot-plug data disk (--config --live)
           shell: |
             virsh attach-disk {{ _vms[0].name }} \
-              "{{ _data_disk }}" vdb \
+              "{{ _data_disk }}" {{ _disk_dev }} \
               --driver qemu --subdriver qcow2 \
-              --targetbus virtio \
+              --targetbus {{ _disk_bus }} \
               --config --live
 
         - name: Show result
           debug:
-            msg: "Data disk ({{ _data_disk_gb }}G) attached to {{ _vms[0].name }} as vdb. Format and mount inside VM: mkfs.ext4 /dev/vdb && mount /dev/vdb /data"
+            msg: "Data disk ({{ _data_disk_gb }}G) attached to {{ _vms[0].name }} as {{ _disk_dev }} (bus: {{ _disk_bus }})."
 
     - name: Skip - data disk already attached
       debug:
