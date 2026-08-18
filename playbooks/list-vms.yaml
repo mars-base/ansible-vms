@@ -24,6 +24,7 @@
       shell: virsh dominfo {{ item.name }} 2>/dev/null || echo "NOT_FOUND"
       register: _vm_status
       changed_when: false
+      failed_when: false
       loop: "{{ _vms }}"
       loop_control:
         label: "{{ item.name }}"
@@ -33,7 +34,7 @@
       register: _vm_ip
       changed_when: false
       failed_when: false
-      when: item.rc == 0
+      when: "'NOT_FOUND' not in item.stdout"
       loop: "{{ _vm_status.results }}"
       loop_control:
         label: "{{ item.item.name }}"
@@ -44,8 +45,8 @@
           {% for vm in _vms %}
           {% set idx = loop.index0 %}
           {% set status = _vm_status.results[idx] %}
-          {% set ip = _vm_ip.results[idx].stdout | default('-') %}
-          {% if status.rc == 0 %}
+          {% set ip = _vm_ip.results[idx].stdout | default('-') if _vm_ip.results[idx] is not skipped else '-' %}
+          {% if 'NOT_FOUND' not in status.stdout %}
           {% set state = status.stdout_lines | select('match', 'State') | list | first | default('') | regex_replace('State:\s*', '') %}
           {{ '%-20s' | format(vm.name) }} {{ '%-15s' | format(ip) }} {{ '%-8s' | format(vm.type) }} {{ '%-6s' | format(vm.vcpus + ' vCPU') }} {{ '%-10s' | format(vm.memory_mb + ' MB') }} {{ '%-6s' | format(vm.os) }} {{ state }}
           {% else %}
