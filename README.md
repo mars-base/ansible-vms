@@ -117,6 +117,23 @@ Deletes: domain definition, disk images (qcow2), OVMF VARS, cloud-init ISO, TPM 
 
 **Warning**: This is destructive and irreversible. The `--confirm` flag is required.
 
+### Attach Data Disk
+
+```bash
+# Attach data disk to a running VM (hot-plug, no reboot needed)
+ap playbooks/attach-data-disk.yaml -e vm_name=debian12-dev
+```
+
+Reads `data_disk_gb` from `vms.csv`. The VM must have `data_disk_gb > 0` defined in CSV. Hot-plugs the disk to the running VM using `virsh attach-disk --config --live` (persistent + immediate effect).
+
+Inside the VM, format and mount the new disk:
+
+```bash
+mkfs.ext4 /dev/vdb
+mkdir -p /data
+mount /dev/vdb /data
+```
+
 ## VM Definition (vms.csv)
 
 | Field | Description | Example |
