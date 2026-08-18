@@ -2,7 +2,9 @@
 
 # Attach data disk to a running VM (hot-plug, no reboot needed)
 # Usage:
-#   ap playbooks/attach-data-disk.yaml -e vm_name=debian13-01 -e data_disk_gb=10
+#   ap playbooks/attach-data-disk.yaml -e vm_name=debian13-01
+#
+# Reads data_disk_gb from vms.csv. VM must have data_disk_gb > 0 in CSV.
 
 - name: Attach data disk to VM
   gather_facts: false
@@ -14,12 +16,7 @@
     - name: Check vm_name is specified
       assert:
         that: vm_name is defined and vm_name != ''
-        fail_msg: "vm_name is required. Usage: -e vm_name=<name> -e data_disk_gb=<size>"
-
-    - name: Check data_disk_gb is specified
-      assert:
-        that: data_disk_gb is defined and data_disk_gb | int > 0
-        fail_msg: "data_disk_gb is required. Usage: -e vm_name=<name> -e data_disk_gb=<size>"
+        fail_msg: "vm_name is required. Usage: -e vm_name=<name>"
 
     - name: Read vms.csv
       read_csv:
@@ -36,6 +33,15 @@
         that: _vms | length > 0
         fail_msg: "VM '{{ vm_name }}' not found in vms.csv for host '{{ inventory_hostname }}'"
 
+    - name: Check data_disk_gb in vms.csv
+      assert:
+        that: _vms[0].data_disk_gb | default('') | length > 0 and _vms[0].data_disk_gb | int > 0
+        fail_msg: "VM '{{ vm_name }}' has no data disk defined in vms.csv (data_disk_gb is empty or 0). Set data_disk_gb > 0 in vms.csv first."
+
+    - name: Set data disk size
+      set_fact:
+        _data_disk_gb: "{{ _vms[0].data_disk_gb }}"
+
     - name: Check if VM is defined in libvirt
       shell: virsh domstate {{ _vms[0].name }} 2>/dev/null
       register: _vm_check
@@ -45,7 +51,7 @@
     - name: Check VM exists
       assert:
         that: _vm_check.rc == 0
-        fail_msg: "VM '{{ vm_name }}' is not defined in libvirt. Create it first."
+        fail_msg: "VM '{{ vm_name }}' is not defined in libvirt. Create it first with create-vm.yaml."
 
     - name: Set storage path
       set_fact:
@@ -66,7 +72,7 @@
       block:
         - name: Create data disk qcow2
           shell: |
-            qemu-img create -f qcow2 "{{ _data_disk }}" "{{ data_disk_gb }}G"
+            qemu-img create -f qcow2 "{{ _data_disk }}" "{{ _data_disk_gb }}G"
 
         - name: Hot-plug data disk (--config --live)
           shell: |
@@ -78,7 +84,7 @@
 
         - name: Show result
           debug:
-            msg: "Data disk ({{ data_disk_gb }}G) attached to {{ _vms[0].name }} as vdb. Format and mount inside VM: mkfs.ext4 /dev/vdb && mount /dev/vdb /data"
+            msg: "Data disk ({{ _data_disk_gb }}G) attached to {{ _vms[0].name }} as vdb. Format and mount inside VM: mkfs.ext4 /dev/vdb && mount /dev/vdb /data"
 
     - name: Skip - data disk already attached
       debug:
