@@ -21,10 +21,14 @@ ansible-vms/
 │   └── kvm_hosts/               # KVM host variables
 ├── host_vars/                   # Per-host variables
 ├── playbooks/
-│   └── create-vm.yaml           # Create VMs from vms.csv
+│   ├── create-vm.yaml           # Create VMs from vms.csv
+│   ├── destroy-vm.yaml          # Destroy VMs
+│   ├── list-vms.yaml            # List VMs
+│   ├── start-vm.yaml            # Start VMs
+│   ├── stop-vm.yaml             # Stop VMs
+│   └── restart-vm.yaml          # Restart VMs
 ├── roles/
 │   └── create_vm/               # VM creation role (libvirt XML)
-├── roles_init/                  # Host initialization roles
 ├── scripts/                     # Helper scripts
 └── var/                         # Runtime data (logs, facts cache)
 ```

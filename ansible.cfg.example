@@ -27,8 +27,8 @@ fact_caching_timeout = 86400
 fact_caching_connection = var/facts
 
 # Roles and paths
-# role 搜索路径，用冒号分隔
-roles_path = roles:roles_init
+# role 搜索路径
+roles_path = roles
 retry_files_save_path = var
 
 # Warnings and behavior
