@@ -134,6 +134,27 @@ mkdir -p /data
 mount /dev/vdb /data
 ```
 
+### Resize Data Disk
+
+```bash
+# Resize data disk (reads target size from vms.csv)
+ap playbooks/resize-data-disk.yaml -e vm_name=debian12-dev
+```
+
+Reads target `data_disk_gb` from `vms.csv`. The playbook will:
+1. Check if target size is larger than current (shrinking not supported)
+2. If VM is running → graceful shutdown and wait for stop
+3. Resize qcow2 file with `qemu-img resize`
+4. If VM was running → automatically start VM again
+
+After resize, expand the filesystem inside the VM:
+
+```bash
+resize2fs /dev/vdb
+```
+
+**Note**: If VM is already shut off, the playbook resizes the disk directly without auto-starting it.
+
 ## VM Definition (vms.csv)
 
 | Field | Description | Example |
