@@ -30,7 +30,7 @@
         label: "{{ item.name }}"
 
     - name: Get VM IP from ARP
-      shell: ip neigh show dev {{ item.item.bridge }} 2>/dev/null | grep -i "{{ item.item.mac }}" | awk '{print $1}' | head -1
+      shell: ip neigh show dev {{ item.item.bridge }} 2>/dev/null | grep -i "{{ item.item.mac }}" | awk '/REACHABLE/{print $1; found=1; exit} {last=$1} END{if(!found) print last}'
       register: _vm_ip
       changed_when: false
       failed_when: false
