@@ -36,7 +36,7 @@
     disk_format: ext4
     format_force: "false"
     auto_mount: "true"
-    need_partition: "true"
+    need_partition: "false"
   tasks:
     # ── Parameter validation ──────────────────────────────────────────
     - name: Check required parameters

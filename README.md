@@ -168,7 +168,7 @@ Format and mount data disk inside Linux VM. Requires the VM to be defined in `ho
 - `disk_device`: disk device path (default: `/dev/vdb`)
 - `mount_point`: mount point (required, e.g. `/data`)
 - `disk_format`: filesystem type (default: `ext4`)
-- `need_partition`: create GPT partition (default: `true`, uses `/dev/vdb1`)
+- `need_partition`: create GPT partition (default: `false`, raw disk mount)
 - `format_force`: force reformat (default: `false`)
 - `auto_mount`: add to fstab (default: `true`)
 
