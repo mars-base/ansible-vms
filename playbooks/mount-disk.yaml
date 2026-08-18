@@ -1,0 +1,165 @@
+---
+# Mount and format disk device on Linux VMs
+#
+# Parameters:
+#   disk_device:     disk device path, e.g. /dev/vdb (without partition number)
+#   mount_point:     mount point, e.g. /data
+#   disk_format:     filesystem type, default ext4
+#   format_force:    force format even if filesystem exists, default false
+#   auto_mount:      add to fstab for auto-mount on boot, default true
+#   need_partition:  create GPT partition first, default true (use /dev/vdb1)
+#
+# Usage:
+#   # With partition (default, /dev/vdb -> /dev/vdb1)
+#   ap playbooks/mount-disk.yaml -e vm_name=debian13-01 -e mount_point=/data
+#
+#   # Without partition (raw disk, /dev/vdb directly)
+#   ap playbooks/mount-disk.yaml -e vm_name=debian13-01 -e mount_point=/data -e need_partition=false
+#
+#   # Force format (WARNING: destroys existing data)
+#   ap playbooks/mount-disk.yaml -e vm_name=debian13-01 -e mount_point=/data -e format_force=true
+#
+# Tags:
+#   -t partition  # only partition the disk
+#   -t format     # only format the disk
+#   -t mount      # only mount the disk
+
+- name: Mount disk on VM
+  gather_facts: true
+  hosts: "{{ HOSTS | default('kvm_hosts') }}"
+  become: true
+  become_user: root
+  become_method: sudo
+  vars:
+    disk_device: /dev/vdb
+    mount_point: /data
+    disk_format: ext4
+    format_force: "false"
+    auto_mount: "true"
+    need_partition: "true"
+  tasks:
+    # ── Parameter validation ──────────────────────────────────────────
+    - name: Check required parameters
+      assert:
+        that:
+          - disk_device | length > 0
+          - mount_point | length > 0
+        fail_msg: "disk_device and mount_point are required"
+
+    # ── Pre-flight checks ─────────────────────────────────────────────
+    - name: Check disk device exists
+      stat:
+        path: "{{ disk_device }}"
+      register: _disk_stat
+
+    - name: Fail if disk device not found
+      fail:
+        msg: "Disk device {{ disk_device }} not found. Check if data disk is attached."
+      when: not _disk_stat.stat.exists
+
+    - name: Check if already mounted
+      shell: mount | grep -q "{{ disk_device }}"
+      register: _mounted
+      failed_when: false
+      changed_when: false
+
+    - name: Skip if already mounted
+      debug:
+        msg: "Disk {{ disk_device }} is already mounted, skipping."
+      when: _mounted.rc == 0
+
+    # ── Install parted if needed ──────────────────────────────────────
+    - name: Check if parted is installed
+      shell: which parted
+      register: _parted
+      failed_when: false
+      changed_when: false
+      tags: [partition]
+
+    - name: Install parted
+      apt:
+        name: parted
+        state: present
+        update_cache: true
+      when: _parted.rc != 0
+      tags: [partition]
+
+    # ── Partition ─────────────────────────────────────────────────────
+    - name: Create GPT partition table and partition
+      when: need_partition == "true" and _mounted.rc != 0
+      tags: [partition]
+      block:
+        - name: Create GPT partition table if not exists
+          shell: |
+            parted -s {{ disk_device }} print | grep 'Partition Table: gpt' || \
+            parted -s {{ disk_device }} mklabel gpt
+
+        - name: Create partition if not exists
+          shell: |
+            parted -s {{ disk_device }} print | grep -E '^ 1' || \
+            parted -s {{ disk_device }} mkpart primary 0% 100%
+
+        - name: Wait for partition device
+          shell: test -e "{{ disk_device }}1"
+          register: _part_wait
+          retries: 5
+          delay: 2
+          until: _part_wait.rc == 0
+
+    # ── Format ────────────────────────────────────────────────────────
+    - name: Format disk
+      when: _mounted.rc != 0 and (format_force == "true" or _need_format | default(true))
+      tags: [format]
+      block:
+        - name: Check if filesystem exists on device
+          shell: blkid -s TYPE -o value {{ disk_device }}{{ '1' if need_partition == 'true' else '' }}
+          register: _fs_check
+          failed_when: false
+          changed_when: false
+
+        - name: Set format target device
+          set_fact:
+            _format_device: "{{ disk_device }}{{ '1' if need_partition == 'true' else '' }}"
+
+        - name: Format disk with {{ disk_format }}
+          shell: echo y | mkfs.{{ disk_format }} {{ _format_device }}
+          when: format_force == "true" or _fs_check.stdout | length == 0
+
+    # ── Mount ─────────────────────────────────────────────────────────
+    - name: Mount disk
+      when: _mounted.rc != 0 and auto_mount == "true"
+      tags: [mount]
+      block:
+        - name: Create mount point directory
+          file:
+            path: "{{ mount_point }}"
+            state: directory
+            mode: "0755"
+
+        - name: Get filesystem UUID
+          shell: blkid -s UUID -o value {{ disk_device }}{{ '1' if need_partition == 'true' else '' }}
+          register: _uuid
+
+        - name: Fail if no UUID found
+          fail:
+            msg: "No UUID found for {{ disk_device }}. Is the disk formatted?"
+          when: _uuid.stdout | length == 0
+
+        - name: Add fstab entry
+          lineinfile:
+            path: /etc/fstab
+            line: "UUID={{ _uuid.stdout }} {{ mount_point }} {{ disk_format }} defaults,noatime,nodiratime 0 0"
+            regexp: " {{ mount_point }} {{ disk_format }}"
+            state: present
+            backup: true
+
+        - name: Mount all filesystems
+          shell: mount -a
+
+        - name: Verify mount
+          shell: df -h | grep "{{ mount_point }}"
+          register: _mount_result
+
+        - name: Show result
+          debug:
+            msg: "{{ _mount_result.stdout_lines }}"
