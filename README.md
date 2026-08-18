@@ -150,7 +150,12 @@ Reads target `data_disk_gb` from `vms.csv`. The playbook will:
 After resize, expand the filesystem inside the VM:
 
 ```bash
+# Linux VM
 resize2fs /dev/vdb
+
+# Windows VM (PowerShell)
+$maxSize = (Get-PartitionSupportedSize -DriveLetter E).SizeMax
+Resize-Partition -DriveLetter E -Size $maxSize
 ```
 
 **Note**: If VM is already shut off, the playbook resizes the disk directly without auto-starting it.
