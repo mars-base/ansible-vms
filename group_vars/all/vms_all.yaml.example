@@ -80,7 +80,8 @@ vm_default_rng: true
 # vm_cloud_init_ssh_password: SSH password (empty = disabled)
 # vm_cloud_init_timezone: timezone (tz database)
 # vm_cloud_init_locale: system locale
-# vm_cloud_init_packages: packages to install on first boot
+# vm_cloud_init_packages: built-in packages (always installed)
+# vm_cloud_init_extra_packages: user-defined packages (merged with built-in)
 vm_cloud_init_user: root
 vm_cloud_init_ssh_password: ""
 vm_cloud_init_timezone: Asia/Shanghai
@@ -89,6 +90,7 @@ vm_cloud_init_packages:
   - qemu-guest-agent
   - curl
   - wget
+vm_cloud_init_extra_packages:
   - vim
   - htop
   - git

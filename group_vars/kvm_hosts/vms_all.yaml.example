@@ -28,10 +28,12 @@ vm_cloud_init_locale: "en_US.UTF-8"
 # Uncomment and add your keys for passwordless SSH access:
 # vm_cloud_init_ssh_authorized_keys:
 #   - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... user@host"
-#   - "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTY... user@host"
+#   - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ... user@host (3072/4096-bit recommended)"
 
-# Packages to install on first boot (in addition to base image packages)
-# vm_cloud_init_packages:
+# Packages to install on first boot
+# vm_cloud_init_packages: built-in packages (always installed)
+# vm_cloud_init_extra_packages: user-defined packages (merged with built-in)
+# vm_cloud_init_extra_packages:
 #   - vim
 #   - curl
 #   - git

@@ -45,7 +45,7 @@ write_files:
 package_update: true
 package_upgrade: false
 packages:
-{% for pkg in vm.cloud_init_packages | default(vm_cloud_init_packages) %}
+{% for pkg in vm.cloud_init_packages | default(vm_cloud_init_packages) | union(vm.cloud_init_extra_packages | default(vm_cloud_init_extra_packages)) %}
   - {{ pkg }}
 {% endfor %}
 

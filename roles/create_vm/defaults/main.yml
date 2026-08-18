@@ -47,10 +47,10 @@ vm_cloud_init_user: root
 vm_cloud_init_ssh_password: ""
 vm_cloud_init_timezone: Asia/Shanghai
 vm_cloud_init_locale: en_US.UTF-8
+# Built-in packages (always installed)
 vm_cloud_init_packages:
   - qemu-guest-agent
   - curl
   - wget
-  - vim
-  - htop
-  - git
+# User-defined packages (merged with built-in)
+vm_cloud_init_extra_packages: []
