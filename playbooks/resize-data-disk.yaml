@@ -1,0 +1,127 @@
+---
+
+# Resize data disk of a VM to match data_disk_gb in vms.csv
+# Usage:
+#   1. Update data_disk_gb in vms.csv to desired size
+#   2. ap playbooks/resize-data-disk.yaml -e vm_name=debian13-01
+#
+# The VM will be shut down, disk resized, then started again.
+# Shrinking is not supported.
+# After resize, expand filesystem inside VM: resize2fs /dev/vdb
+
+- name: Resize data disk
+  gather_facts: false
+  hosts: "{{ HOSTS | default('kvm_hosts') }}"
+  become: true
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: Check vm_name is specified
+      assert:
+        that: vm_name is defined and vm_name != ''
+        fail_msg: "vm_name is required. Usage: -e vm_name=<name>"
+
+    - name: Read vms.csv
+      read_csv:
+        path: "{{ vm_csv_file | default(inventory_dir + '/vms.csv') }}"
+      register: _vms_csv
+      delegate_to: localhost
+
+    - name: Filter VM by name
+      set_fact:
+        _vms: "{{ _vms_csv.list | selectattr('host', 'equalto', inventory_hostname) | selectattr('name', 'equalto', vm_name) | list }}"
+
+    - name: Check VM found
+      assert:
+        that: _vms | length > 0
+        fail_msg: "VM '{{ vm_name }}' not found in vms.csv for host '{{ inventory_hostname }}'"
+
+    - name: Check data_disk_gb in vms.csv
+      assert:
+        that: _vms[0].data_disk_gb | default('') | length > 0 and _vms[0].data_disk_gb | int > 0
+        fail_msg: "VM '{{ vm_name }}' has no data disk defined in vms.csv (data_disk_gb is empty or 0)."
+
+    - name: Set target size
+      set_fact:
+        _target_gb: "{{ _vms[0].data_disk_gb | int }}"
+
+    - name: Check if VM is defined in libvirt
+      shell: virsh domstate {{ _vms[0].name }} 2>/dev/null
+      register: _vm_check
+      failed_when: false
+      changed_when: false
+
+    - name: Check VM exists
+      assert:
+        that: _vm_check.rc == 0
+        fail_msg: "VM '{{ vm_name }}' is not defined in libvirt. Create it first."
+
+    - name: Set storage path
+      set_fact:
+        _storage_dir: "{{ (_vms[0].storage_dir if _vms[0].storage_dir | default('') | length > 0 else vm_images_dir | default('/var/lib/libvirt/images')) }}/{{ _vms[0].name }}"
+
+    - name: Set data disk path
+      set_fact:
+        _data_disk: "{{ _storage_dir }}/{{ _vms[0].name }}-data.qcow2"
+
+    - name: Check data disk exists
+      stat:
+        path: "{{ _data_disk }}"
+      register: _disk_stat
+
+    - name: Check data disk file exists
+      assert:
+        that: _disk_stat.stat.exists
+        fail_msg: "Data disk not found at {{ _data_disk }}. Attach a data disk first with attach-data-disk.yaml."
+
+    - name: Get current disk size
+      shell: qemu-img info --force-share "{{ _data_disk }}" --output=json | python3 -c "import sys,json; print(int(json.load(sys.stdin)['virtual-size']) // 1073741824)"
+      register: _current_size
+      changed_when: false
+
+    - name: Set current size
+      set_fact:
+        _current_gb: "{{ _current_size.stdout | int }}"
+
+    - name: Skip - no resize needed
+      debug:
+        msg: "Data disk is already {{ _current_gb }}G (target: {{ _target_gb }}G), no resize needed."
+      when: _target_gb | int <= _current_gb | int
+
+    - name: Check new size is larger
+      assert:
+        that: _target_gb | int > _current_gb | int
+        fail_msg: "Target size ({{ _target_gb }}G) must be larger than current size ({{ _current_gb }}G). Shrinking is not supported."
+
+    - name: Get VM state
+      shell: virsh domstate {{ _vms[0].name }}
+      register: _vm_state
+      changed_when: false
+
+    - name: Shutdown VM for resize
+      when: _vm_state.stdout == 'running'
+      block:
+        - name: Graceful shutdown
+          shell: virsh shutdown {{ _vms[0].name }}
+
+        - name: Wait for VM to stop
+          shell: virsh domstate {{ _vms[0].name }}
+          register: _vm_state_wait
+          until: _vm_state_wait.stdout == 'shut off'
+          retries: 30
+          delay: 2
+          changed_when: false
+
+    - name: Resize qcow2 file
+      shell: qemu-img resize "{{ _data_disk }}" "{{ _target_gb }}G"
+
+    - name: Restart VM
+      when: _vm_state.stdout == 'running'
+      shell: virsh start {{ _vms[0].name }}
+
+    - name: Show result
+      debug:
+        msg:
+          - "Data disk resized: {{ _current_gb }}G -> {{ _target_gb }}G"
+          - "Expand filesystem inside VM:"
+          - "  resize2fs /dev/vdb"
