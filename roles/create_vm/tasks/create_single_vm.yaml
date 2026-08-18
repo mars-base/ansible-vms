@@ -88,6 +88,11 @@
     - name: "Define VM {{ vm.name }}"
       shell: virsh define /tmp/{{ vm.name }}.xml
 
+    - name: "Clean up XML file for {{ vm.name }}"
+      file:
+        path: "/tmp/{{ vm.name }}.xml"
+        state: absent
+
     - name: "Start VM {{ vm.name }}"
       shell: virsh start {{ vm.name }}
       when: vm.autostart | default(true) | bool
