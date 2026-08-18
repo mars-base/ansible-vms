@@ -17,11 +17,16 @@
 #   autostart   - Auto-start on host boot: true / false
 #   storage_dir - Custom storage path (empty = default /var/lib/libvirt/images)
 #                 VM files stored in <storage_dir>/<vm-name>/
+#   ip          - Static IP address (empty = DHCP, Linux VM only)
+#   netmask     - Subnet CIDR (default: 22, e.g. 24 for 255.255.255.0)
+#   gateway     - Default gateway
+#   dns         - DNS servers (comma-separated, e.g. "8.8.8.8,8.8.4.4")
 #
 # Usage:
 #   ap playbooks/create-vm.yaml          # Create all VMs
 #   ap playbooks/destroy-vm.yaml -e vm_name=xxx -e confirm=true  # Destroy VM
 
-name,host,type,memory_mb,vcpus,os,disk_gb,data_disk_gb,base_image,bridge,mac,firmware,autostart,storage_dir
-my-windows-vm,local,windows,8192,4,win11,80,10,/path/to/windows-base.qcow2,br0,52:54:00:xx:xx:xx,efi,true,
-my-linux-vm,local,linux,2048,2,debian12,20,0,/path/to/debian-12-genericcloud-amd64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms
+name,host,type,memory_mb,vcpus,os,disk_gb,data_disk_gb,base_image,bridge,mac,firmware,autostart,storage_dir,ip,netmask,gateway,dns
+my-windows-vm,local,windows,8192,4,win11,80,10,/path/to/windows-base.qcow2,br0,52:54:00:xx:xx:xx,efi,true,,,,
+my-linux-vm,local,linux,2048,2,debian12,20,0,/path/to/debian-12-genericcloud-amd64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms,,,,
+my-linux-static,local,linux,2048,2,debian12,20,5,/path/to/debian-12-genericcloud-amd64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms,192.168.1.100,22,192.168.1.1,"8.8.8.8,8.8.4.4"

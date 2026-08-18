@@ -68,13 +68,34 @@
         mode: "0644"
       when: vm.type | default('linux') == 'linux'
 
+    - name: "Check if static IP is configured for {{ vm.name }}"
+      set_fact:
+        _has_static_ip: "{{ vm.ip is defined and vm.ip | length > 0 }}"
+      when: vm.type | default('linux') == 'linux'
+
+    - name: "Generate cloud-init network-config for {{ vm.name }}"
+      template:
+        src: network-config.j2
+        dest: "/tmp/{{ vm.name }}-cloudinit/network-config"
+        mode: "0644"
+      when:
+        - vm.type | default('linux') == 'linux'
+        - _has_static_ip | bool
+
     - name: "Generate cloud-init ISO for {{ vm.name }}"
       shell: |
         cd /tmp/{{ vm.name }}-cloudinit && \
+        {% if _has_static_ip | default(false) | bool %}
+        genisoimage -output {{ _vm_storage_dir }}/{{ vm.name }}-seed.iso \
+          -input-charset utf-8 \
+          -volid cidata -joliet -rock \
+          user-data meta-data network-config
+        {% else %}
         genisoimage -output {{ _vm_storage_dir }}/{{ vm.name }}-seed.iso \
           -input-charset utf-8 \
           -volid cidata -joliet -rock \
           user-data meta-data
+        {% endif %}
       args:
         creates: "{{ _vm_storage_dir }}/{{ vm.name }}-seed.iso"
       when: vm.type | default('linux') == 'linux'
