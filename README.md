@@ -275,7 +275,7 @@ xfreerdp /v:10.241.20.45 /u:Administrator /p:<password>
 | `bridge` | Network bridge | `br0` |
 | `mac` | MAC address | `52:54:00:xx:xx:xx` |
 | `firmware` | `efi` or empty (BIOS) | `efi` |
-| `autostart` | Auto-start on boot | `true` |
+| `autostart` | Auto-start on boot (default: `false`) | `true` |
 | `storage_dir` | VM storage path (optional, default: `/var/lib/libvirt/images`) | `/data/vms` |
 | `ip` | Static IP address (optional, Linux only, empty = DHCP) | `192.168.1.100` |
 | `netmask` | Subnet CIDR (optional, default: `22`) | `24` |

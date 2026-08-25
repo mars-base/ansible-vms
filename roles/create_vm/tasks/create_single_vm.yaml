@@ -116,8 +116,8 @@
 
     - name: "Start VM {{ vm.name }}"
       shell: virsh start {{ vm.name }}
-      when: vm.autostart | default(true) | bool
+      when: vm.autostart | default(vm_default_autostart) | bool
 
     - name: "Set VM {{ vm.name }} autostart"
       shell: virsh autostart {{ vm.name }}
-      when: vm.autostart | default(true) | bool
+      when: vm.autostart | default(vm_default_autostart) | bool

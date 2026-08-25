@@ -42,6 +42,9 @@ vm_default_tpm: true
 vm_default_memballoon: true
 vm_default_rng: true
 
+# Autostart: whether VM starts automatically on host boot
+vm_default_autostart: false
+
 # Cloud-init defaults for Linux VMs
 vm_cloud_init_user: root
 vm_cloud_init_ssh_password: ""

@@ -55,6 +55,20 @@
         enabled: yes
       when: ansible_os_family == "Debian"
 
+    - name: Enable and start virtlogd
+      service:
+        name: virtlogd
+        state: started
+        enabled: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Enable and start libvirt-guests
+      service:
+        name: libvirt-guests
+        state: started
+        enabled: yes
+      when: ansible_os_family == "Debian"
+
     - name: Install base packages (RedHat/CentOS)
       yum:
         name: "{{ base_packages }}"
