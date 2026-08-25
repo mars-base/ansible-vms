@@ -1,6 +1,11 @@
 version: 2
 ethernets:
   {{ vm.nic_name | default('ens3') }}:
+{% if vm.nic_name is defined and vm.nic_name | length > 0 %}
+    match:
+      macaddress: "{{ vm.mac }}"
+    set-name: {{ vm.nic_name }}
+{% endif %}
     addresses:
       - {{ vm.ip }}/{{ vm.netmask | default('22') }}
     routes:

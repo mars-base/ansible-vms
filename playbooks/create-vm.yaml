@@ -2,6 +2,7 @@
 
 # 创建虚拟机
 # 用法: ap playbooks/create-vm.yaml
+#       ap playbooks/create-vm.yaml -e "vm_name=ubuntu26-01"  # 只创建指定VM
 
 - name: Create virtual machines
   gather_facts: false
