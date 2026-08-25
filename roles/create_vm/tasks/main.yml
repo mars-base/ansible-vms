@@ -10,6 +10,11 @@
   set_fact:
     _vms: "{{ _vms_csv.list | selectattr('host', 'equalto', inventory_hostname) | list }}"
 
+- name: Filter by vm_name if specified
+  set_fact:
+    _vms: "{{ _vms | selectattr('name', 'equalto', vm_name) | list }}"
+  when: vm_name is defined
+
 - name: Create VMs
   include_tasks: create_single_vm.yaml
   loop: "{{ _vms }}"

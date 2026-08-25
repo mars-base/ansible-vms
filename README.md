@@ -460,25 +460,51 @@ Set `data_disk_gb=0` (or leave empty) for VMs without a data disk.
 
 ## Linux Base Image
 
-The Linux VMs use the official Debian 12 (Bookworm) generic cloud image. This image is pre-configured with cloud-init support and works out-of-the-box with this project.
+The Linux VMs use official cloud images pre-configured with cloud-init support. Supported distributions:
 
-**Download the latest image:**
+### Debian
 
-```bash
-wget https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2
-```
-
-**Alternative (archived versions):**
+**Download the latest Debian 12 (Bookworm) image:**
 
 ```bash
-# Browse all versions (bookworm, bullseye, trixie, etc.) at:
-# https://cloud.debian.org/images/cloud/
+wget -O debian-12-genericcloud-amd64.qcow2 \
+  https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2
 ```
 
-Then set the path in `vms.csv` `base_image` field:
+**Alternative versions:** Browse https://cloud.debian.org/images/cloud/ for bookworm, bullseye, trixie, etc.
+
+### Ubuntu
+
+**Download the latest Ubuntu 24.04 LTS (Noble) image:**
+
+```bash
+wget -O ubuntu-24.04-server-cloudimg-amd64.img \
+  https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+```
+
+**Download the latest Ubuntu 26.04 LTS (Resolute) image:**
+
+```bash
+wget -O ubuntu-26.04-server-cloudimg-amd64.img \
+  https://cloud-images.ubuntu.com/resolute/current/resolute-server-cloudimg-amd64.img
+```
+
+**Important:** Ubuntu cloud images require the **virtio** network driver. The VM templates in this project already use virtio, so no additional configuration is needed.
+
+**Note:** Always verify the downloaded image checksum against the official SHA256SUMS file to avoid corrupted images causing boot failures.
+
+**Alternative versions:** Browse https://cloud-images.ubuntu.com/ for other Ubuntu releases.
+
+### Configuration
+
+Set the image path in `vms.csv` `base_image` field:
 
 ```csv
-my-linux-vm,local,linux,...,/path/to/debian-12-genericcloud-amd64.qcow2,...
+# Debian
+my-debian-vm,local,linux,...,/path/to/debian-12-genericcloud-amd64.qcow2,...
+
+# Ubuntu
+my-ubuntu-vm,local,linux,...,/path/to/ubuntu-24.04-server-cloudimg-amd64.img,...
 ```
 
 The image is automatically configured via cloud-init on first boot (SSH keys, user, packages, etc. from `group_vars/kvm_hosts/vms_all.yaml`).
