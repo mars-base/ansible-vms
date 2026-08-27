@@ -176,7 +176,7 @@ ap playbooks/setup-user.yaml -e "HOSTS=debian12-01" -e "username=diwen" -e "ssh_
 - `username`: user name to create (default: `admin`)
 - `ssh_pubkey`: SSH public key file path (default: `~/.ssh/id_rsa.pub`)
 - `user_shell`: login shell (default: `/bin/bash`)
-- `user_groups`: user groups, comma-separated (default: `sudo`)
+- `user_groups`: user groups, comma-separated (auto-detected: `wheel` for Fedora/RHEL, `sudo` for Debian/Ubuntu)
 - `passwordless_sudo`: enable passwordless sudo (default: `true`)
 
 **Behavior:**
@@ -562,6 +562,19 @@ wget -O ubuntu-26.04-server-cloudimg-amd64.img \
 **Note:** Always verify the downloaded image checksum against the official SHA256SUMS file to avoid corrupted images causing boot failures.
 
 **Alternative versions:** Browse https://cloud-images.ubuntu.com/ for other Ubuntu releases.
+
+### Fedora
+
+**Download the latest Fedora 44 Cloud Base image:**
+
+```bash
+wget -O Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2 \
+  https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2
+```
+
+**Note:** Fedora uses `wheel` group for sudo privileges (not `sudo`). The `setup-user` playbook automatically detects this and uses the correct group.
+
+**Alternative versions:** Browse https://fedoraproject.org/cloud/download/ for other Fedora releases.
 
 ### Configuration
 
