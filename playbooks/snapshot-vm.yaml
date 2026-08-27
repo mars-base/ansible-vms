@@ -75,6 +75,8 @@
         that: _vm_check.rc == 0
         fail_msg: "VM '{{ vm_name }}' is not defined in libvirt. Create it first with create-vm.yaml"
 
+    # ===== CREATE =====
+
     - name: Generate snapshot timestamp
       shell: date +%Y%m%d-%H%M%S
       register: _snap_timestamp
@@ -114,75 +116,12 @@
       shell: virsh start {{ _vms[0].name }}
       when: snap_action == 'create' and halt | default(true) | bool and _vm_state_before.stdout == 'running'
 
-    - name: Get snapshot info
-      shell: "virsh snapshot-info {{ _vms[0].name }} {{ _snapshot_name }}"
-      register: _snapshot_info
-      changed_when: false
+    - name: Show create result
+      debug:
+        msg: "Snapshot '{{ _snapshot_name }}' created for VM '{{ vm_name }}'"
       when: snap_action == 'create'
 
-    - name: Show snapshot created
-      debug:
-        msg: |
-          Snapshot created successfully for VM '{{ vm_name }}'
-
-          Name: {{ _snapshot_name }}
-          {% if snapshot_desc is defined and snapshot_desc != '' %}Description: {{ snapshot_desc }}
-          {% endif %}Type: Full (disk + memory)
-          {% if halt | default(true) | bool %}Halt: yes (VM was shutdown before snapshot){% endif %}
-
-          {{ _snapshot_info.stdout }}
-      when: snap_action == 'create'
-
-    - name: Get snapshot names
-      shell: "virsh snapshot-list {{ _vms[0].name }} --name"
-      register: _snapshot_names
-      changed_when: false
-      when: snap_action == 'list'
-
-    - name: Get snapshot XML details
-      shell: |
-        xml=$(virsh snapshot-dumpxml {{ _vms[0].name }} {{ item }} 2>/dev/null)
-        name=$(echo "$xml" | grep -oP '<name>\K[^<]+')
-        desc=$(echo "$xml" | grep -oP '<description>\K[^<]+' || echo '-')
-        epoch=$(echo "$xml" | grep -oP '<creationTime>\K[^<]+')
-        created=$(date -d @"$epoch" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo '-')
-        state=$(echo "$xml" | grep -oP '<state>\K[^<]+')
-        echo "NAME=${name}"
-        echo "DESC=${desc}"
-        echo "CREATED=${created}"
-        echo "STATE=${state}"
-      register: _snapshot_xmls
-      changed_when: false
-      loop: "{{ _snapshot_names.stdout_lines }}"
-      when: snap_action == 'list' and _snapshot_names.stdout_lines | length > 0
-
-    - name: Get current snapshot
-      shell: "virsh snapshot-current {{ _vms[0].name }} --name 2>/dev/null || echo ''"
-      register: _snapshot_current
-      changed_when: false
-      when: snap_action == 'list'
-
-    - name: Show snapshot list
-      debug:
-        msg: |
-          Snapshots for VM '{{ vm_name }}':
-          {% if _snapshot_xmls is not skipped and _snapshot_xmls.results | length > 0 %}
-          {% for snap in _snapshot_xmls.results %}
-          {% set vars = {} %}
-          {% for line in snap.stdout_lines %}
-          {% set _ = vars.update({line.split('=')[0]: line.split('=')[1:] | join('=')}) %}
-          {% endfor %}
-          ---
-          Name:        {{ vars.NAME | default('-') }}
-          Description: {{ vars.DESC | default('-') }}
-          Created:     {{ vars.CREATED | default('-') }}
-          State:       {{ vars.STATE | default('-') }}
-          Current:     {{ 'yes' if vars.NAME == _snapshot_current.stdout | trim else 'no' }}
-          {% endfor %}
-          {% else %}
-          (no snapshots)
-          {% endif %}
-      when: snap_action == 'list'
+    # ===== REVERT =====
 
     - name: Check snapshot exists for revert
       shell: "virsh snapshot-info {{ _vms[0].name }} {{ snapshot_name }} 2>/dev/null"
@@ -197,15 +136,40 @@
         fail_msg: "Snapshot '{{ snapshot_name }}' not found for VM '{{ vm_name }}'"
       when: snap_action == 'revert'
 
+    - name: Check VM state before revert
+      shell: "virsh domstate {{ _vms[0].name }}"
+      register: _vm_state_before_revert
+      changed_when: false
+      when: snap_action == 'revert'
+
+    - name: Shutdown VM before revert
+      shell: "virsh shutdown {{ _vms[0].name }}"
+      when: snap_action == 'revert' and _vm_state_before_revert.stdout == 'running'
+
+    - name: Wait for VM to stop before revert
+      shell: "virsh domstate {{ _vms[0].name }}"
+      register: _vm_state_wait_revert
+      until: _vm_state_wait_revert.stdout == 'shut off'
+      retries: 30
+      delay: 2
+      changed_when: false
+      when: snap_action == 'revert' and _vm_state_before_revert.stdout == 'running'
+
     - name: Revert to snapshot
       shell: "virsh snapshot-revert {{ _vms[0].name }} {{ snapshot_name }}"
       register: _snapshot_revert
       when: snap_action == 'revert'
 
+    - name: Start VM if was running before revert
+      shell: "virsh start {{ _vms[0].name }}"
+      when: snap_action == 'revert' and _vm_state_before_revert.stdout == 'running'
+
     - name: Show revert result
       debug:
-        msg: "Successfully reverted VM '{{ vm_name }}' to snapshot '{{ snapshot_name }}'"
+        msg: "VM '{{ vm_name }}' reverted to snapshot '{{ snapshot_name }}' (state: {{ _vm_state_before_revert.stdout }})"
       when: snap_action == 'revert'
+
+    # ===== DELETE =====
 
     - name: Check snapshot exists for delete
       shell: "virsh snapshot-info {{ _vms[0].name }} {{ snapshot_name }} 2>/dev/null"
@@ -227,5 +191,55 @@
 
     - name: Show delete result
       debug:
-        msg: "Successfully deleted snapshot '{{ snapshot_name }}' from VM '{{ vm_name }}'"
+        msg: "Snapshot '{{ snapshot_name }}' deleted from VM '{{ vm_name }}'"
       when: snap_action == 'delete'
+
+    # ===== SNAPSHOT LIST (always shown at the end) =====
+
+    - name: Get snapshot names
+      shell: "virsh snapshot-list {{ _vms[0].name }} --name"
+      register: _snapshot_names
+      changed_when: false
+
+    - name: Get snapshot XML details
+      shell: |
+        xml=$(virsh snapshot-dumpxml {{ _vms[0].name }} {{ item }} 2>/dev/null)
+        name=$(echo "$xml" | grep -oP '<name>\K[^<]+')
+        desc=$(echo "$xml" | grep -oP '<description>\K[^<]+' || echo '-')
+        epoch=$(echo "$xml" | grep -oP '<creationTime>\K[^<]+')
+        created=$(date -d @"$epoch" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo '-')
+        state=$(echo "$xml" | grep -oP '<state>\K[^<]+')
+        echo "NAME=${name}"
+        echo "DESC=${desc}"
+        echo "CREATED=${created}"
+        echo "STATE=${state}"
+      register: _snapshot_xmls
+      changed_when: false
+      loop: "{{ _snapshot_names.stdout_lines }}"
+      when: _snapshot_names.stdout_lines | length > 0
+
+    - name: Get current snapshot
+      shell: "virsh snapshot-current {{ _vms[0].name }} --name 2>/dev/null || echo ''"
+      register: _snapshot_current
+      changed_when: false
+
+    - name: Show snapshot list
+      debug:
+        msg: |
+          Snapshots for VM '{{ vm_name }}':
+          {% if _snapshot_xmls is not skipped and _snapshot_xmls.results | length > 0 %}
+          {% for snap in _snapshot_xmls.results %}
+          {% set vars = {} %}
+          {% for line in snap.stdout_lines %}
+          {% set _ = vars.update({line.split('=')[0]: line.split('=')[1:] | join('=')}) %}
+          {% endfor %}
+          ---
+          Name:        {{ vars.NAME | default('-') }}
+          Description: {{ vars.DESC | default('-') }}
+          Created:     {{ vars.CREATED | default('-') }}
+          State:       {{ vars.STATE | default('-') }}
+          Current:     {{ 'yes' if vars.NAME == _snapshot_current.stdout | trim else 'no' }}
+          {% endfor %}
+          {% else %}
+          (no snapshots)
+          {% endif %}
