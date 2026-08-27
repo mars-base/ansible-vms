@@ -1,5 +1,5 @@
 ---
-# Setup user account on VMs
+# Setup user account on Linux VMs
 #
 # Usage:
 #   # Create user with SSH key and passwordless sudo
@@ -8,13 +8,12 @@
 #   # Specify SSH public key file
 #   ap playbooks/setup-user.yaml -e "HOSTS=debian12-01" -e "username=diwen" -e "ssh_pubkey=/path/to/id_rsa.pub"
 #
-#   # Multiple VMs (using host group)
+#   # Multiple VMs (using host group, Windows hosts auto-skipped)
 #   ap playbooks/setup-user.yaml -e "HOSTS=vm_dev" -e "username=diwen"
 
 - name: Setup user account
   hosts: "{{ HOSTS | default('vms') }}"
-  become: true
-  gather_facts: false
+  gather_facts: true
 
   vars:
     _username: "{{ username | default('admin') }}"
@@ -24,16 +23,6 @@
     _passwordless_sudo: "{{ passwordless_sudo | default(true) }}"
 
   tasks:
-    - name: Check if target is Linux
-      ansible.builtin.raw: uname -s
-      register: _os_check
-      changed_when: false
-
-    - name: Fail if not Linux
-      ansible.builtin.fail:
-        msg: "Target {{ inventory_hostname }} is not a Linux system (detected: {{ _os_check.stdout | trim }})"
-      when: _os_check.stdout | trim != 'Linux'
-
     - name: Read SSH public key
       ansible.builtin.slurp:
         src: "{{ _ssh_pubkey_file | expanduser }}"
@@ -44,29 +33,38 @@
       ansible.builtin.set_fact:
         ssh_key: "{{ pubkey_content.content | b64decode | trim }}"
 
-    - name: Create user
-      ansible.builtin.user:
-        name: "{{ _username }}"
-        shell: "{{ _user_shell }}"
-        groups: "{{ _user_groups }}"
-        append: true
-        create_home: true
-        state: present
-
-    - name: Configure SSH authorized key
-      ansible.builtin.authorized_key:
-        user: "{{ _username }}"
-        key: "{{ ssh_key }}"
-        state: present
-
-    - name: Configure passwordless sudo
-      ansible.builtin.copy:
-        dest: "/etc/sudoers.d/{{ _username }}"
-        content: "{{ _username }} ALL=(ALL) NOPASSWD:ALL"
-        mode: '0440'
-        validate: 'visudo -cf %s'
-      when: _passwordless_sudo | bool
-
-    - name: Display result
+    - name: Skip non-Linux hosts
       ansible.builtin.debug:
-        msg: "User {{ _username }} configured on {{ inventory_hostname }}"
+        msg: "Skipped {{ inventory_hostname }} (OS: {{ ansible_system | default('unknown') }}) — setup-user only supports Linux"
+      when: ansible_system | default('') != 'Linux'
+
+    - name: Configure user on Linux
+      become: true
+      when: ansible_system | default('') == 'Linux'
+      block:
+        - name: Create user
+          ansible.builtin.user:
+            name: "{{ _username }}"
+            shell: "{{ _user_shell }}"
+            groups: "{{ _user_groups }}"
+            append: true
+            create_home: true
+            state: present
+
+        - name: Configure SSH authorized key
+          ansible.builtin.authorized_key:
+            user: "{{ _username }}"
+            key: "{{ ssh_key }}"
+            state: present
+
+        - name: Configure passwordless sudo
+          ansible.builtin.copy:
+            dest: "/etc/sudoers.d/{{ _username }}"
+            content: "{{ _username }} ALL=(ALL) NOPASSWD:ALL\n"
+            mode: '0440'
+            validate: 'visudo -cf %s'
+          when: _passwordless_sudo | bool
+
+        - name: Display result
+          ansible.builtin.debug:
+            msg: "User {{ _username }} configured on {{ inventory_hostname }}"
