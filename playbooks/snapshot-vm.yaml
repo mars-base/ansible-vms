@@ -116,11 +116,6 @@
       shell: virsh start {{ _vms[0].name }}
       when: snap_action == 'create' and halt | default(true) | bool and _vm_state_before.stdout == 'running'
 
-    - name: Show create result
-      debug:
-        msg: "Snapshot '{{ _snapshot_name }}' created for VM '{{ vm_name }}'"
-      when: snap_action == 'create'
-
     # ===== REVERT =====
 
     - name: Check snapshot exists for revert
@@ -164,11 +159,6 @@
       shell: "virsh start {{ _vms[0].name }}"
       when: snap_action == 'revert' and _vm_state_before_revert.stdout == 'running'
 
-    - name: Show revert result
-      debug:
-        msg: "VM '{{ vm_name }}' reverted to snapshot '{{ snapshot_name }}' (state: {{ _vm_state_before_revert.stdout }})"
-      when: snap_action == 'revert'
-
     # ===== DELETE =====
 
     - name: Check snapshot exists for delete
@@ -187,11 +177,6 @@
     - name: Delete snapshot
       shell: "virsh snapshot-delete {{ _vms[0].name }} {{ snapshot_name }}"
       register: _snapshot_delete
-      when: snap_action == 'delete'
-
-    - name: Show delete result
-      debug:
-        msg: "Snapshot '{{ snapshot_name }}' deleted from VM '{{ vm_name }}'"
       when: snap_action == 'delete'
 
     # ===== SNAPSHOT LIST (always shown at the end) =====
@@ -243,3 +228,20 @@
           {% else %}
           (no snapshots)
           {% endif %}
+
+    # ===== OPERATION RESULT =====
+
+    - name: Show create result
+      debug:
+        msg: "Snapshot '{{ _snapshot_name }}' created for VM '{{ vm_name }}'"
+      when: snap_action == 'create'
+
+    - name: Show revert result
+      debug:
+        msg: "VM '{{ vm_name }}' reverted to snapshot '{{ snapshot_name }}' (state: {{ _vm_state_before_revert.stdout }})"
+      when: snap_action == 'revert'
+
+    - name: Show delete result
+      debug:
+        msg: "Snapshot '{{ snapshot_name }}' deleted from VM '{{ vm_name }}'"
+      when: snap_action == 'delete'
