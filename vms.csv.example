@@ -29,4 +29,6 @@
 name,host,type,memory_mb,vcpus,os,disk_gb,data_disk_gb,base_image,bridge,mac,firmware,autostart,storage_dir,ip,netmask,gateway,dns
 my-windows-vm,local,windows,8192,4,win11,80,10,/path/to/windows-base.qcow2,br0,52:54:00:xx:xx:xx,efi,true,,,,
 my-linux-vm,local,linux,2048,2,debian12,20,0,/path/to/debian-12-genericcloud-amd64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms,,,,
+my-ubuntu-vm,local,linux,2048,2,ubuntu2404,20,5,/path/to/ubuntu-24.04-server-cloudimg-amd64.img,br0,52:54:00:xx:xx:xx,,true,/data/vms,,,,
+my-fedora-vm,local,linux,2048,2,fedora44,20,5,/path/to/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms,,,,
 my-linux-static,local,linux,2048,2,debian12,20,5,/path/to/debian-12-genericcloud-amd64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms,192.168.1.100,22,192.168.1.1,"8.8.8.8,8.8.4.4"
