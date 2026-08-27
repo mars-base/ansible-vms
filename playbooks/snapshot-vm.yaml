@@ -179,6 +179,23 @@
       register: _snapshot_delete
       when: snap_action == 'delete'
 
+    # ===== OPERATION RESULT =====
+
+    - name: Show create result
+      debug:
+        msg: "Snapshot '{{ _snapshot_name }}' created for VM '{{ vm_name }}'"
+      when: snap_action == 'create'
+
+    - name: Show revert result
+      debug:
+        msg: "VM '{{ vm_name }}' reverted to snapshot '{{ snapshot_name }}' (state: {{ _vm_state_before_revert.stdout }})"
+      when: snap_action == 'revert'
+
+    - name: Show delete result
+      debug:
+        msg: "Snapshot '{{ snapshot_name }}' deleted from VM '{{ vm_name }}'"
+      when: snap_action == 'delete'
+
     # ===== SNAPSHOT LIST (always shown at the end) =====
 
     - name: Get snapshot names
@@ -228,20 +245,3 @@
           {% else %}
           (no snapshots)
           {% endif %}
-
-    # ===== OPERATION RESULT =====
-
-    - name: Show create result
-      debug:
-        msg: "Snapshot '{{ _snapshot_name }}' created for VM '{{ vm_name }}'"
-      when: snap_action == 'create'
-
-    - name: Show revert result
-      debug:
-        msg: "VM '{{ vm_name }}' reverted to snapshot '{{ snapshot_name }}' (state: {{ _vm_state_before_revert.stdout }})"
-      when: snap_action == 'revert'
-
-    - name: Show delete result
-      debug:
-        msg: "Snapshot '{{ snapshot_name }}' deleted from VM '{{ vm_name }}'"
-      when: snap_action == 'delete'
