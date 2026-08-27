@@ -18,7 +18,7 @@
   vars:
     _username: "{{ username | default('admin') }}"
     _user_shell: "{{ user_shell | default('/bin/bash') }}"
-    _user_groups: "{{ user_groups | default('sudo') }}"
+    _user_groups: "{{ user_groups | default('wheel' if ansible_distribution in ['Fedora', 'CentOS', 'RedHat', 'Rocky', 'AlmaLinux'] else 'sudo') }}"
     _ssh_pubkey_file: "{{ ssh_pubkey | default('~/.ssh/id_rsa.pub') }}"
     _passwordless_sudo: "{{ passwordless_sudo | default(true) }}"
 
