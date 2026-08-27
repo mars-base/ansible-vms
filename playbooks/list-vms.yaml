@@ -2,7 +2,7 @@
 
 # List all VMs from vms.csv and show their status
 # Usage: ap playbooks/list-vms.yaml
-#        ap playbooks/list-vms.yaml -e "vm_host=local"  # 只列出指定宿主的VM
+#        ap playbooks/list-vms.yaml -e "kvm_host=local"  # 只列出指定宿主的VM
 
 - name: List virtual machines
   gather_facts: false
@@ -21,10 +21,10 @@
       set_fact:
         _vms: "{{ _vms_csv.list | selectattr('host', 'equalto', inventory_hostname) | list }}"
 
-    - name: Filter VMs by vm_host if specified
+    - name: Filter VMs by kvm_host if specified
       set_fact:
-        _vms: "{{ _vms | selectattr('host', 'equalto', vm_host) | list }}"
-      when: vm_host is defined
+        _vms: "{{ _vms | selectattr('host', 'equalto', kvm_host) | list }}"
+      when: kvm_host is defined
 
     - name: Get VM status
       shell: virsh dominfo {{ item.name }} 2>/dev/null || echo "NOT_FOUND"

@@ -24,6 +24,7 @@ ansible-vms/
 │   ├── create-vm.yaml           # Create VMs from vms.csv
 │   ├── destroy-vm.yaml          # Destroy VMs
 │   ├── list-vms.yaml            # List VMs
+│   ├── snapshot-vm.yaml         # Manage VM snapshots
 │   ├── start-vm.yaml            # Start VMs
 │   ├── stop-vm.yaml             # Stop VMs
 │   └── restart-vm.yaml          # Restart VMs
@@ -116,6 +117,40 @@ ap playbooks/destroy-vm.yaml -e vm_name=win11-dev -e confirm=true
 Deletes: domain definition, disk images (qcow2), OVMF VARS, cloud-init ISO, TPM state.
 
 **Warning**: This is destructive and irreversible. The `--confirm` flag is required.
+
+### Manage Snapshots
+
+Create, list, revert, and delete VM snapshots using libvirt's built-in snapshot support.
+
+```bash
+# Create snapshot (auto-generated name: snap-YYYYMMDD-HHMMSS)
+ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create
+
+# Create snapshot with custom name and description
+ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e snapshot_name=before-upgrade -e snapshot_desc="升级前快照"
+
+# Create disk-only snapshot (no memory state, faster)
+ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e disk_only=true
+
+# List all snapshots
+ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=list
+
+# Revert to snapshot (requires confirmation)
+ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=revert -e snapshot_name=before-upgrade -e confirm=true
+
+# Delete snapshot
+ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=delete -e snapshot_name=before-upgrade
+```
+
+**Parameters:**
+- `vm_name`: VM name (required)
+- `snap_action`: `create` / `list` / `revert` / `delete` (required)
+- `snapshot_name`: snapshot name (auto-generated for create; required for revert/delete)
+- `snapshot_desc`: description (optional, create only)
+- `disk_only`: skip memory state (optional, create only, default: `false`)
+- `confirm`: safety flag (required for revert)
+
+**Note**: Full snapshots (disk + memory) capture the running VM state. Disk-only snapshots are faster but the VM will be powered off after revert.
 
 ### Attach Data Disk
 

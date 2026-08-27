@@ -1,0 +1,176 @@
+---
+
+# Manage VM snapshots (create, list, revert, delete)
+# Usage:
+#   # Create snapshot (auto-generated name with timestamp)
+#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create
+#
+#   # Create snapshot with custom name and description
+#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e snapshot_name=before-upgrade -e snapshot_desc="Before kernel upgrade"
+#
+#   # Create disk-only snapshot (no memory state, faster)
+#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e disk_only=true
+#
+#   # List all snapshots
+#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=list
+#
+#   # Revert to snapshot (requires confirmation)
+#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=revert -e snapshot_name=before-upgrade -e confirm=true
+#
+#   # Delete snapshot
+#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=delete -e snapshot_name=before-upgrade
+
+- name: Manage VM snapshots
+  gather_facts: false
+  hosts: "{{ HOSTS | default('kvm_hosts') }}"
+  become: true
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: Check vm_name is specified
+      assert:
+        that: vm_name is defined and vm_name != ''
+        fail_msg: "vm_name is required. Usage: -e vm_name=<name> -e snap_action=<create|list|revert|delete>"
+
+    - name: Check snap_action is valid
+      assert:
+        that: snap_action is defined and snap_action in ['create', 'list', 'revert', 'delete']
+        fail_msg: "snap_action is required and must be one of: create, list, revert, delete"
+
+    - name: Check snapshot_name for revert/delete
+      assert:
+        that: snapshot_name is defined and snapshot_name != ''
+        fail_msg: "snapshot_name is required for {{ snap_action }} action. Usage: -e snapshot_name=<name>"
+      when: snap_action in ['revert', 'delete']
+
+    - name: Check confirm flag for revert
+      assert:
+        that: confirm | default(false) | bool
+        fail_msg: "Revert is a destructive operation. Add -e confirm=true to proceed"
+      when: snap_action == 'revert'
+
+    - name: Read vms.csv
+      read_csv:
+        path: "{{ vm_csv_file | default(inventory_dir + '/vms.csv') }}"
+      register: _vms_csv
+      delegate_to: localhost
+
+    - name: Filter VM by name
+      set_fact:
+        _vms: "{{ _vms_csv.list | selectattr('host', 'equalto', inventory_hostname) | selectattr('name', 'equalto', vm_name) | list }}"
+
+    - name: Check VM found
+      assert:
+        that: _vms | length > 0
+        fail_msg: "VM '{{ vm_name }}' not found in vms.csv for host '{{ inventory_hostname }}'"
+
+    - name: Check VM exists in libvirt
+      shell: virsh domstate {{ _vms[0].name }} 2>/dev/null
+      register: _vm_check
+      failed_when: false
+      changed_when: false
+
+    - name: Assert VM exists in libvirt
+      assert:
+        that: _vm_check.rc == 0
+        fail_msg: "VM '{{ vm_name }}' is not defined in libvirt. Create it first with create-vm.yaml"
+
+    - name: Generate snapshot timestamp
+      shell: date +%Y%m%d-%H%M%S
+      register: _snap_timestamp
+      changed_when: false
+      when: snap_action == 'create' and (snapshot_name is not defined or snapshot_name == '')
+
+    - name: Set snapshot name
+      set_fact:
+        _snapshot_name: "{{ snapshot_name if (snapshot_name is defined and snapshot_name != '') else 'snap-' + _snap_timestamp.stdout }}"
+      when: snap_action == 'create'
+
+    - name: Create snapshot
+      shell: "virsh snapshot-create-as {{ _vms[0].name }} {{ _snapshot_name }}{% if snapshot_desc is defined and snapshot_desc != '' %} --description '{{ snapshot_desc }}'{% endif %}{% if disk_only | default(false) | bool %} --disk-only{% endif %}"
+      register: _snapshot_create
+      when: snap_action == 'create'
+
+    - name: Get snapshot info
+      shell: "virsh snapshot-info {{ _vms[0].name }} {{ _snapshot_name }}"
+      register: _snapshot_info
+      changed_when: false
+      when: snap_action == 'create'
+
+    - name: Show snapshot created
+      debug:
+        msg: |
+          Snapshot created successfully for VM '{{ vm_name }}'
+
+          Name: {{ _snapshot_name }}
+          {% if snapshot_desc is defined and snapshot_desc != '' %}Description: {{ snapshot_desc }}
+          {% endif %}Type: {{ 'Disk-only' if disk_only | default(false) | bool else 'Full (disk + memory)' }}
+
+          {{ _snapshot_info.stdout }}
+      when: snap_action == 'create'
+
+    - name: List snapshots
+      shell: "virsh snapshot-list {{ _vms[0].name }}"
+      register: _snapshot_list
+      changed_when: false
+      when: snap_action == 'list'
+
+    - name: Show snapshot list
+      debug:
+        msg: |
+          Snapshots for VM '{{ vm_name }}':
+
+          {{ _snapshot_list.stdout }}
+      when: snap_action == 'list'
+
+    - name: Check snapshot exists for revert
+      shell: "virsh snapshot-info {{ _vms[0].name }} {{ snapshot_name }} 2>/dev/null"
+      register: _snap_exists_revert
+      failed_when: false
+      changed_when: false
+      when: snap_action == 'revert'
+
+    - name: Assert snapshot exists for revert
+      assert:
+        that: _snap_exists_revert.rc == 0
+        fail_msg: "Snapshot '{{ snapshot_name }}' not found for VM '{{ vm_name }}'"
+      when: snap_action == 'revert'
+
+    - name: Check snapshot type for revert
+      assert:
+        that: "'Location:       internal' in _snap_exists_revert.stdout"
+        fail_msg: "Snapshot '{{ snapshot_name }}' is an external (disk-only) snapshot and cannot be reverted. Only internal (full) snapshots support revert."
+      when: snap_action == 'revert'
+
+    - name: Revert to snapshot
+      shell: "virsh snapshot-revert {{ _vms[0].name }} {{ snapshot_name }}"
+      register: _snapshot_revert
+      when: snap_action == 'revert'
+
+    - name: Show revert result
+      debug:
+        msg: "Successfully reverted VM '{{ vm_name }}' to snapshot '{{ snapshot_name }}'"
+      when: snap_action == 'revert'
+
+    - name: Check snapshot exists for delete
+      shell: "virsh snapshot-info {{ _vms[0].name }} {{ snapshot_name }} 2>/dev/null"
+      register: _snap_exists_delete
+      failed_when: false
+      changed_when: false
+      when: snap_action == 'delete'
+
+    - name: Assert snapshot exists for delete
+      assert:
+        that: _snap_exists_delete.rc == 0
+        fail_msg: "Snapshot '{{ snapshot_name }}' not found for VM '{{ vm_name }}'"
+      when: snap_action == 'delete'
+
+    - name: Delete snapshot
+      shell: "virsh snapshot-delete {{ _vms[0].name }} {{ snapshot_name }}"
+      register: _snapshot_delete
+      when: snap_action == 'delete'
+
+    - name: Show delete result
+      debug:
+        msg: "Successfully deleted snapshot '{{ snapshot_name }}' from VM '{{ vm_name }}'"
+      when: snap_action == 'delete'
