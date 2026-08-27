@@ -1,6 +1,6 @@
 version: 2
 ethernets:
-  {{ vm.nic_name | default('ens3') }}:
+  {{ vm.nic_name | default('ens3', true) }}:
 {% if vm.nic_name is defined and vm.nic_name | length > 0 %}
     match:
       macaddress: "{{ vm.mac }}"
