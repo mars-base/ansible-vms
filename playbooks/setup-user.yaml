@@ -24,6 +24,16 @@
     _passwordless_sudo: "{{ passwordless_sudo | default(true) }}"
 
   tasks:
+    - name: Check if target is Linux
+      ansible.builtin.raw: uname -s
+      register: _os_check
+      changed_when: false
+
+    - name: Fail if not Linux
+      ansible.builtin.fail:
+        msg: "Target {{ inventory_hostname }} is not a Linux system (detected: {{ _os_check.stdout | trim }})"
+      when: _os_check.stdout | trim != 'Linux'
+
     - name: Read SSH public key
       ansible.builtin.slurp:
         src: "{{ _ssh_pubkey_file | expanduser }}"
