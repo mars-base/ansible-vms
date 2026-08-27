@@ -133,9 +133,32 @@
           {{ _snapshot_info.stdout }}
       when: snap_action == 'create'
 
-    - name: List snapshots
-      shell: "virsh snapshot-list {{ _vms[0].name }}"
-      register: _snapshot_list
+    - name: Get snapshot names
+      shell: "virsh snapshot-list {{ _vms[0].name }} --name"
+      register: _snapshot_names
+      changed_when: false
+      when: snap_action == 'list'
+
+    - name: Get snapshot XML details
+      shell: |
+        xml=$(virsh snapshot-dumpxml {{ _vms[0].name }} {{ item }} 2>/dev/null)
+        name=$(echo "$xml" | grep -oP '<name>\K[^<]+')
+        desc=$(echo "$xml" | grep -oP '<description>\K[^<]+' || echo '-')
+        epoch=$(echo "$xml" | grep -oP '<creationTime>\K[^<]+')
+        created=$(date -d @"$epoch" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo '-')
+        state=$(echo "$xml" | grep -oP '<state>\K[^<]+')
+        echo "NAME=${name}"
+        echo "DESC=${desc}"
+        echo "CREATED=${created}"
+        echo "STATE=${state}"
+      register: _snapshot_xmls
+      changed_when: false
+      loop: "{{ _snapshot_names.stdout_lines }}"
+      when: snap_action == 'list' and _snapshot_names.stdout_lines | length > 0
+
+    - name: Get current snapshot
+      shell: "virsh snapshot-current {{ _vms[0].name }} --name 2>/dev/null || echo ''"
+      register: _snapshot_current
       changed_when: false
       when: snap_action == 'list'
 
@@ -143,8 +166,22 @@
       debug:
         msg: |
           Snapshots for VM '{{ vm_name }}':
-
-          {{ _snapshot_list.stdout }}
+          {% if _snapshot_xmls is not skipped and _snapshot_xmls.results | length > 0 %}
+          {% for snap in _snapshot_xmls.results %}
+          {% set vars = {} %}
+          {% for line in snap.stdout_lines %}
+          {% set _ = vars.update({line.split('=')[0]: line.split('=')[1:] | join('=')}) %}
+          {% endfor %}
+          ---
+          Name:        {{ vars.NAME | default('-') }}
+          Description: {{ vars.DESC | default('-') }}
+          Created:     {{ vars.CREATED | default('-') }}
+          State:       {{ vars.STATE | default('-') }}
+          Current:     {{ 'yes' if vars.NAME == _snapshot_current.stdout | trim else 'no' }}
+          {% endfor %}
+          {% else %}
+          (no snapshots)
+          {% endif %}
       when: snap_action == 'list'
 
     - name: Check snapshot exists for revert
