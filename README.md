@@ -25,6 +25,7 @@ ansible-vms/
 │   ├── destroy-vm.yaml          # Destroy VMs
 │   ├── list-vms.yaml            # List VMs
 │   ├── snapshot-vm.yaml         # Manage VM snapshots
+│   ├── setup-user.yaml          # Setup user accounts on Linux VMs
 │   ├── start-vm.yaml            # Start VMs
 │   ├── stop-vm.yaml             # Stop VMs
 │   └── restart-vm.yaml          # Restart VMs
@@ -154,6 +155,35 @@ ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=delete -e sn
 - `halt=true` (default): If VM is running → shutdown → snapshot → start (restore running state). If VM is off → snapshot → remain off (preserve off state).
 - `halt=false`: Create snapshot while VM is running (live snapshot). Faster but may have incomplete disk writes.
 - Revert restores the VM to the exact state at snapshot time (running or off depending on snapshot state).
+
+### Setup User Account
+
+Create user account on Linux VMs with SSH key and passwordless sudo. Auto-skips non-Linux hosts.
+
+```bash
+# Create user on single VM
+ap playbooks/setup-user.yaml -e "HOSTS=debian12-01" -e "username=diwen"
+
+# Create user on multiple VMs (host group)
+ap playbooks/setup-user.yaml -e "HOSTS=vms" -e "username=diwen"
+
+# Specify SSH public key
+ap playbooks/setup-user.yaml -e "HOSTS=debian12-01" -e "username=diwen" -e "ssh_pubkey=/path/to/id_rsa.pub"
+```
+
+**Parameters:**
+- `HOSTS`: target host or group (default: `vms`)
+- `username`: user name to create (default: `admin`)
+- `ssh_pubkey`: SSH public key file path (default: `~/.ssh/id_rsa.pub`)
+- `user_shell`: login shell (default: `/bin/bash`)
+- `user_groups`: user groups, comma-separated (default: `sudo`)
+- `passwordless_sudo`: enable passwordless sudo (default: `true`)
+
+**Behavior:**
+- Auto-detects OS via `gather_facts: true`
+- Linux hosts: creates user, configures SSH key, enables passwordless sudo
+- Non-Linux hosts (Windows, etc.): skipped with message showing detected OS
+- Idempotent: safe to run multiple times on same host
 
 ### Attach Data Disk
 
