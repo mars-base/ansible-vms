@@ -586,6 +586,9 @@ my-debian-vm,local,linux,...,/path/to/debian-12-genericcloud-amd64.qcow2,...
 
 # Ubuntu
 my-ubuntu-vm,local,linux,...,/path/to/ubuntu-24.04-server-cloudimg-amd64.img,...
+
+# Fedora
+my-fedora-vm,local,linux,...,/path/to/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2,...
 ```
 
 The image is automatically configured via cloud-init on first boot (SSH keys, user, packages, etc. from `group_vars/kvm_hosts/vms_all.yaml`).
