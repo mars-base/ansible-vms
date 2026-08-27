@@ -2,13 +2,16 @@
 
 # Manage VM snapshots (create, list, revert, delete)
 # Usage:
-#   # Create snapshot (auto-generated name with timestamp)
+#   # Create snapshot (default: shutdown VM first for disk consistency)
 #   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create
+#
+#   # Create snapshot without shutdown (live snapshot, faster but less safe)
+#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e halt=false
 #
 #   # Create snapshot with custom name and description
 #   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e snapshot_name=before-upgrade -e snapshot_desc="Before kernel upgrade"
 #
-#   # Create disk-only snapshot (no memory state, faster)
+#   # Create disk-only snapshot (no memory state)
 #   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e disk_only=true
 #
 #   # List all snapshots
@@ -86,10 +89,33 @@
         _snapshot_name: "{{ snapshot_name if (snapshot_name is defined and snapshot_name != '') else 'snap-' + _snap_timestamp.stdout }}"
       when: snap_action == 'create'
 
+    - name: Check VM state before halt
+      shell: virsh domstate {{ _vms[0].name }}
+      register: _vm_state_before
+      changed_when: false
+      when: snap_action == 'create' and halt | default(true) | bool
+
+    - name: Shutdown VM for snapshot
+      shell: virsh shutdown {{ _vms[0].name }}
+      when: snap_action == 'create' and halt | default(true) | bool and _vm_state_before.stdout == 'running'
+
+    - name: Wait for VM to stop
+      shell: virsh domstate {{ _vms[0].name }}
+      register: _vm_state_wait
+      until: _vm_state_wait.stdout == 'shut off'
+      retries: 30
+      delay: 2
+      changed_when: false
+      when: snap_action == 'create' and halt | default(true) | bool and _vm_state_before.stdout == 'running'
+
     - name: Create snapshot
       shell: "virsh snapshot-create-as {{ _vms[0].name }} {{ _snapshot_name }}{% if snapshot_desc is defined and snapshot_desc != '' %} --description '{{ snapshot_desc }}'{% endif %}{% if disk_only | default(false) | bool %} --disk-only{% endif %}"
       register: _snapshot_create
       when: snap_action == 'create'
+
+    - name: Restart VM after snapshot
+      shell: virsh start {{ _vms[0].name }}
+      when: snap_action == 'create' and halt | default(true) | bool and _vm_state_before.stdout == 'running'
 
     - name: Get snapshot info
       shell: "virsh snapshot-info {{ _vms[0].name }} {{ _snapshot_name }}"
@@ -105,6 +131,7 @@
           Name: {{ _snapshot_name }}
           {% if snapshot_desc is defined and snapshot_desc != '' %}Description: {{ snapshot_desc }}
           {% endif %}Type: {{ 'Disk-only' if disk_only | default(false) | bool else 'Full (disk + memory)' }}
+          {% if halt | default(true) | bool %}Halt: yes (VM was shutdown before snapshot){% endif %}
 
           {{ _snapshot_info.stdout }}
       when: snap_action == 'create'
