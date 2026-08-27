@@ -11,9 +11,6 @@
 #   # Create snapshot with custom name and description
 #   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e snapshot_name=before-upgrade -e snapshot_desc="Before kernel upgrade"
 #
-#   # Create disk-only snapshot (no memory state)
-#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e disk_only=true
-#
 #   # List all snapshots
 #   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=list
 #
@@ -109,7 +106,7 @@
       when: snap_action == 'create' and halt | default(true) | bool and _vm_state_before.stdout == 'running'
 
     - name: Create snapshot
-      shell: "virsh snapshot-create-as {{ _vms[0].name }} {{ _snapshot_name }}{% if snapshot_desc is defined and snapshot_desc != '' %} --description '{{ snapshot_desc }}'{% endif %}{% if disk_only | default(false) | bool %} --disk-only{% endif %}"
+      shell: "virsh snapshot-create-as {{ _vms[0].name }} {{ _snapshot_name }}{% if snapshot_desc is defined and snapshot_desc != '' %} --description '{{ snapshot_desc }}'{% endif %}"
       register: _snapshot_create
       when: snap_action == 'create'
 
@@ -130,7 +127,7 @@
 
           Name: {{ _snapshot_name }}
           {% if snapshot_desc is defined and snapshot_desc != '' %}Description: {{ snapshot_desc }}
-          {% endif %}Type: {{ 'Disk-only' if disk_only | default(false) | bool else 'Full (disk + memory)' }}
+          {% endif %}Type: Full (disk + memory)
           {% if halt | default(true) | bool %}Halt: yes (VM was shutdown before snapshot){% endif %}
 
           {{ _snapshot_info.stdout }}
@@ -161,12 +158,6 @@
       assert:
         that: _snap_exists_revert.rc == 0
         fail_msg: "Snapshot '{{ snapshot_name }}' not found for VM '{{ vm_name }}'"
-      when: snap_action == 'revert'
-
-    - name: Check snapshot type for revert
-      assert:
-        that: "'Location:       internal' in _snap_exists_revert.stdout"
-        fail_msg: "Snapshot '{{ snapshot_name }}' is an external (disk-only) snapshot and cannot be reverted. Only internal (full) snapshots support revert."
       when: snap_action == 'revert'
 
     - name: Revert to snapshot
