@@ -102,7 +102,7 @@
       shell: virsh domstate {{ _vms[0].name }}
       register: _vm_state_wait
       until: _vm_state_wait.stdout == 'shut off'
-      retries: 30
+      retries: 90
       delay: 2
       changed_when: false
       when: snap_action == 'create' and halt | default(true) | bool and _vm_state_before.stdout == 'running'
@@ -145,7 +145,7 @@
       shell: "virsh domstate {{ _vms[0].name }}"
       register: _vm_state_wait_revert
       until: _vm_state_wait_revert.stdout == 'shut off'
-      retries: 30
+      retries: 90
       delay: 2
       changed_when: false
       when: snap_action == 'revert' and _vm_state_before_revert.stdout == 'running'
