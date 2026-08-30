@@ -1,6 +1,6 @@
 ---
 
-# Manage VM snapshots (create, list, revert, delete)
+# Manage VM snapshots (create, list, restore, delete)
 # Usage:
 #   # Create snapshot (default: shutdown VM first for disk consistency)
 #   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create
@@ -14,8 +14,8 @@
 #   # List all snapshots
 #   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=list
 #
-#   # Revert to snapshot (requires confirmation)
-#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=revert -e snapshot_name=before-upgrade -e confirm=true
+#   # Restore to snapshot (requires confirmation)
+#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=restore -e snapshot_name=before-upgrade -e confirm=true
 #
 #   # Delete snapshot
 #   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=delete -e snapshot_name=before-upgrade
@@ -30,24 +30,24 @@
     - name: Check vm_name is specified
       assert:
         that: vm_name is defined and vm_name != ''
-        fail_msg: "vm_name is required. Usage: -e vm_name=<name> -e snap_action=<create|list|revert|delete>"
+        fail_msg: "vm_name is required. Usage: -e vm_name=<name> -e snap_action=<create|list|restore|delete>"
 
     - name: Check snap_action is valid
       assert:
-        that: snap_action is defined and snap_action in ['create', 'list', 'revert', 'delete']
-        fail_msg: "snap_action is required and must be one of: create, list, revert, delete"
+        that: snap_action is defined and snap_action in ['create', 'list', 'restore', 'delete']
+        fail_msg: "snap_action is required and must be one of: create, list, restore, delete"
 
-    - name: Check snapshot_name for revert/delete
+    - name: Check snapshot_name for restore/delete
       assert:
         that: snapshot_name is defined and snapshot_name != ''
         fail_msg: "snapshot_name is required for {{ snap_action }} action. Usage: -e snapshot_name=<name>"
-      when: snap_action in ['revert', 'delete']
+      when: snap_action in ['restore', 'delete']
 
-    - name: Check confirm flag for revert
+    - name: Check confirm flag for restore
       assert:
         that: confirm | default(false) | bool
-        fail_msg: "Revert is a destructive operation. Add -e confirm=true to proceed"
-      when: snap_action == 'revert'
+        fail_msg: "Restore is a destructive operation. Add -e confirm=true to proceed"
+      when: snap_action == 'restore'
 
     - name: Read vms.csv
       read_csv:
@@ -116,48 +116,48 @@
       shell: virsh start {{ _vms[0].name }}
       when: snap_action == 'create' and halt | default(true) | bool and _vm_state_before.stdout == 'running'
 
-    # ===== REVERT =====
+    # ===== RESTORE =====
 
-    - name: Check snapshot exists for revert
+    - name: Check snapshot exists for restore
       shell: "virsh snapshot-info {{ _vms[0].name }} {{ snapshot_name }} 2>/dev/null"
-      register: _snap_exists_revert
+      register: _snap_exists_restore
       failed_when: false
       changed_when: false
-      when: snap_action == 'revert'
+      when: snap_action == 'restore'
 
-    - name: Assert snapshot exists for revert
+    - name: Assert snapshot exists for restore
       assert:
-        that: _snap_exists_revert.rc == 0
+        that: _snap_exists_restore.rc == 0
         fail_msg: "Snapshot '{{ snapshot_name }}' not found for VM '{{ vm_name }}'"
-      when: snap_action == 'revert'
+      when: snap_action == 'restore'
 
-    - name: Check VM state before revert
+    - name: Check VM state before restore
       shell: "virsh domstate {{ _vms[0].name }}"
-      register: _vm_state_before_revert
+      register: _vm_state_before_restore
       changed_when: false
-      when: snap_action == 'revert'
+      when: snap_action == 'restore'
 
-    - name: Shutdown VM before revert
+    - name: Shutdown VM before restore
       shell: "virsh shutdown {{ _vms[0].name }}"
-      when: snap_action == 'revert' and _vm_state_before_revert.stdout == 'running'
+      when: snap_action == 'restore' and _vm_state_before_restore.stdout == 'running'
 
-    - name: Wait for VM to stop before revert
+    - name: Wait for VM to stop before restore
       shell: "virsh domstate {{ _vms[0].name }}"
-      register: _vm_state_wait_revert
-      until: _vm_state_wait_revert.stdout == 'shut off'
+      register: _vm_state_wait_restore
+      until: _vm_state_wait_restore.stdout == 'shut off'
       retries: 90
       delay: 2
       changed_when: false
-      when: snap_action == 'revert' and _vm_state_before_revert.stdout == 'running'
+      when: snap_action == 'restore' and _vm_state_before_restore.stdout == 'running'
 
-    - name: Revert to snapshot
+    - name: Restore to snapshot
       shell: "virsh snapshot-revert {{ _vms[0].name }} {{ snapshot_name }}"
-      register: _snapshot_revert
-      when: snap_action == 'revert'
+      register: _snapshot_restore
+      when: snap_action == 'restore'
 
-    - name: Start VM if was running before revert
+    - name: Start VM if was running before restore
       shell: "virsh start {{ _vms[0].name }}"
-      when: snap_action == 'revert' and _vm_state_before_revert.stdout == 'running'
+      when: snap_action == 'restore' and _vm_state_before_restore.stdout == 'running'
 
     # ===== DELETE =====
 
@@ -186,10 +186,10 @@
         msg: "Snapshot '{{ _snapshot_name }}' created for VM '{{ vm_name }}'"
       when: snap_action == 'create'
 
-    - name: Show revert result
+    - name: Show restore result
       debug:
-        msg: "VM '{{ vm_name }}' reverted to snapshot '{{ snapshot_name }}' (state: {{ _vm_state_before_revert.stdout }})"
-      when: snap_action == 'revert'
+        msg: "VM '{{ vm_name }}' restored to snapshot '{{ snapshot_name }}' (state: {{ _vm_state_before_restore.stdout }})"
+      when: snap_action == 'restore'
 
     - name: Show delete result
       debug:
