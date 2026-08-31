@@ -576,6 +576,19 @@ wget -O Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2 \
 
 **Alternative versions:** Browse https://fedoraproject.org/cloud/download/ for other Fedora releases.
 
+### Rocky Linux
+
+**Download the latest Rocky Linux 10 Cloud Base image:**
+
+```bash
+wget -O Rocky-10-GenericCloud-Base.latest.x86_64.qcow2 \
+  https://dl.rockylinux.org/pub/rocky/10/images/x86_64/Rocky-10-GenericCloud-Base.latest.x86_64.qcow2
+```
+
+**Note:** Rocky Linux uses `wheel` group for sudo privileges (same as RHEL/CentOS). The `setup-user` playbook automatically detects this and uses the correct group.
+
+**Alternative versions:** Browse https://rockylinux.org/download for other Rocky Linux releases.
+
 ### Configuration
 
 Set the image path in `vms.csv` `base_image` field:
@@ -589,6 +602,9 @@ my-ubuntu-vm,local,linux,...,/path/to/ubuntu-24.04-server-cloudimg-amd64.img,...
 
 # Fedora
 my-fedora-vm,local,linux,...,/path/to/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2,...
+
+# Rocky Linux
+my-rocky-vm,local,linux,...,/path/to/Rocky-10-GenericCloud-Base.latest.x86_64.qcow2,...
 ```
 
 The image is automatically configured via cloud-init on first boot (SSH keys, user, packages, etc. from `group_vars/kvm_hosts/vms_all.yaml`).
