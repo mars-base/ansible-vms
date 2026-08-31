@@ -9,7 +9,7 @@ ethernets:
     addresses:
       - {{ vm.ip }}/{{ vm.netmask | default('22') }}
     routes:
-      - to: default
+      - to: 0.0.0.0/0
         via: {{ vm.gateway }}
     nameservers:
       addresses:
