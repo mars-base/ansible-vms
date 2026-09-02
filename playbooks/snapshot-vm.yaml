@@ -17,8 +17,8 @@
 #   # Restore to snapshot (requires confirmation)
 #   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=restore -e snapshot_name=before-upgrade -e confirm=true
 #
-#   # Delete snapshot
-#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=delete -e snapshot_name=before-upgrade
+#   # Delete snapshot (requires confirmation)
+#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=delete -e snapshot_name=before-upgrade -e confirm=true
 
 - name: Manage VM snapshots
   gather_facts: false
@@ -43,11 +43,11 @@
         fail_msg: "snapshot_name is required for {{ snap_action }} action. Usage: -e snapshot_name=<name>"
       when: snap_action in ['restore', 'delete']
 
-    - name: Check confirm flag for restore
+    - name: Check confirm flag for restore/delete
       assert:
         that: confirm | default(false) | bool
-        fail_msg: "Restore is a destructive operation. Add -e confirm=true to proceed"
-      when: snap_action == 'restore'
+        fail_msg: "{{ snap_action | capitalize }} is a destructive operation. Add -e confirm=true to proceed"
+      when: snap_action in ['restore', 'delete']
 
     - name: Read vms.csv
       read_csv:
