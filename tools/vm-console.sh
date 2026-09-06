@@ -53,7 +53,7 @@ fi
 
 # Strip ANSI escape sequences and terminal control codes
 strip_ansi() {
-    sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\x1b\[[0-9;]*[mGK]//g; s/\x1b\[?[0-9;]*[hlmnpr]//g; s/\x1b\[[!][a-zA-Z][0-9]*//g; s/\x1b[()][AB012]//g; s/\x1b\][0-9]+(\x07|\x1b\\)//g; s/\x0f//g; s/\x0e//g'
+    sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\x1b\[[0-9;]*[mGK]//g; s/\x1b\[?[0-9;]*[hlmnpr]//g; s/\x1b\[[!][a-zA-Z][0-9]*//g; s/\x1b[()][AB012]//g; s/\x1b\][0-9]+(\x07|\x1b\\)//g; s/\x1bM//g; s/\x0f//g; s/\x0e//g'
 }
 
 if [[ -n "$TAIL_LINES" ]]; then
