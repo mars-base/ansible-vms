@@ -58,6 +58,7 @@
       <model type='{{ vm.nic_model | default(vm_default_nic_model) }}'/>
     </interface>
     <serial type='pty'>
+      <log file='/var/log/libvirt/qemu/{{ vm.name }}-serial.log' append='on'/>
       <target type='isa-serial' port='0'/>
     </serial>
     <console type='pty'>
