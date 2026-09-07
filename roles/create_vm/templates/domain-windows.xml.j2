@@ -70,6 +70,10 @@
     <controller type='pci' model='pcie-root-port'/>
     <controller type='pci' model='pcie-root-port'/>
     <controller type='sata' index='0'/>
+    <controller type='virtio-serial' index='0'/>
+    <channel type='unix'>
+      <target type='virtio' name='org.qemu.guest_agent.0'/>
+    </channel>
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
       <target dev='sdc' bus='sata'/>

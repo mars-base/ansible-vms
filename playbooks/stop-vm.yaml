@@ -36,6 +36,6 @@
       register: _vm_state
       changed_when: false
 
-    - name: Stop VM
+    - name: Stop VM (graceful shutdown)
       shell: virsh shutdown {{ _vms[0].name }}
       when: _vm_state.stdout == 'running'
