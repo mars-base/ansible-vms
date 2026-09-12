@@ -4,7 +4,7 @@
 # Fields:
 #   name        - VM name (unique identifier, used in virsh commands)
 #   host        - KVM host (must match inventory name in hosts.ini)
-#   type        - OS type: windows / linux
+#   type        - OS type: windows / linux / macos
 #   memory_mb   - Memory in MB
 #   vcpus       - CPU cores
 #   os          - OS variant (used for virt-install --os-variant)
@@ -17,7 +17,9 @@
 #   autostart   - Auto-start on host boot: true / false
 #   storage_dir - Custom storage path (empty = default /var/lib/libvirt/images)
 #                 VM files stored in <storage_dir>/<vm-name>/
-#   ip          - Static IP address (empty = DHCP, Linux VM only)
+#   ip          - Static IP address (empty = DHCP). Linux applies it via cloud-init
+#                 at first boot; macOS has no cloud-init so run
+#                 playbooks/configure-macos.yaml once after the VM boots.
 #   netmask     - Subnet CIDR (default: 22, e.g. 24 for 255.255.255.0)
 #   gateway     - Default gateway
 #   dns         - DNS servers (comma-separated, e.g. "8.8.8.8,8.8.4.4")
@@ -33,3 +35,4 @@ my-ubuntu-vm,local,linux,2048,2,ubuntu2404,20,5,/path/to/ubuntu-24.04-server-clo
 my-fedora-vm,local,linux,2048,2,fedora44,20,5,/path/to/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms,,,,
 my-rocky-vm,local,linux,2048,2,rocky10,20,5,/path/to/Rocky-10-GenericCloud-Base.latest.x86_64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms,,,,
 my-linux-static,local,linux,2048,2,debian12,20,5,/path/to/debian-12-genericcloud-amd64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms,192.168.1.100,22,192.168.1.1,"8.8.8.8,8.8.4.4"
+my-macos-vm,local,macos,8192,4,macos-sonoma,128,0,/path/to/kvm/macos/macos-sonoma-base.img,br0,52:54:00:xx:xx:xx,efi,false,/data/vms,192.168.1.110,22,192.168.1.1,"8.8.8.8,8.8.4.4"

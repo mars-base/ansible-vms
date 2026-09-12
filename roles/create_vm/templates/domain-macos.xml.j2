@@ -1,0 +1,114 @@
+{# macOS (Hackintosh) domain - mirrors the validated /tmp/macos-sonoma-01.xml
+   (q35 + distro persistent OVMF + OpenCore overlay + vmware-svga/user-net via
+   qemu:commandline). OVMF_VARS comes from macos_ovmf_vars_template, a copy of a
+   real `bless --mount / --setBoot` result baked on a q35 SATA controller at the
+   same PCI 1f:2 slot libvirt uses -- so boot.efi's own Startup Manager is
+   satisfied and the VM cold-boots to the login window with zero keyboard input.
+   Note: libvirt's send-key/input-send-event does NOT reach this guest (see
+   docs/macos.md); that's why a pre-blessed nvram template is required rather
+   than booting to a picker and interacting. #}
+<domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
+  <name>{{ vm.name }}</name>
+  <memory unit='KiB'>{{ vm.memory_mb | int * 1024 }}</memory>
+  <currentMemory unit='KiB'>{{ vm.memory_mb | int * 1024 }}</currentMemory>
+  <vcpu placement='static'>{{ vm.vcpus }}</vcpu>
+{% set _storage = (vm.storage_dir if vm.storage_dir | default('') | length > 0 else vm_images_dir) ~ '/' ~ vm.name %}
+{% set _last_octet = vm.ip.split('.')[-1] | int if vm.ip is defined and vm.ip | length > 0 else 80 %}
+{% set _ssh_port = 2200 + _last_octet %}
+{% set _vnc_port = 5900 + _last_octet %}
+  <os>
+    <type arch='x86_64' machine='q35'>hvm</type>
+    <loader readonly='yes' type='pflash'>{{ macos_ovmf_code }}</loader>
+    <nvram template='{{ macos_ovmf_vars_template }}'>{{ _storage }}/{{ vm.name }}-OVMF_VARS.fd</nvram>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+    <vmport state='off'/>
+  </features>
+  <cpu mode='custom' match='exact' check='none'>
+    <model fallback='allow'>{{ macos_cpu_model }}</model>
+    <topology sockets='1' dies='1' cores='{{ vm.vcpus }}' threads='1'/>
+    <feature policy='require' name='ssse3'/>
+    <feature policy='require' name='sse4.2'/>
+    <feature policy='require' name='popcnt'/>
+    <feature policy='require' name='avx'/>
+    <feature policy='require' name='aes'/>
+    <feature policy='require' name='xsave'/>
+    <feature policy='require' name='xsaveopt'/>
+    <feature policy='require' name='invtsc'/>
+    <feature policy='disable' name='hle'/>
+    <feature policy='disable' name='rtm'/>
+  </cpu>
+  <clock offset='utc'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+  </clock>
+  <on_poweroff>{{ vm.poweroff_action | default(vm_default_poweroff_action) }}</on_poweroff>
+  <on_reboot>{{ vm.reboot_action | default(vm_default_reboot_action) }}</on_reboot>
+  <on_crash>{{ vm.crash_action | default(vm_default_crash_action) }}</on_crash>
+  <pm>
+    <suspend-to-mem enabled='no'/>
+    <suspend-to-disk enabled='no'/>
+  </pm>
+  <devices>
+    <emulator>{{ qemu_emulator }}</emulator>
+    {# OpenCore EFI disk (overlay of shared base) #}
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='none' io='native'/>
+      <source file='{{ _storage }}/{{ vm.name }}-OpenCore.qcow2'/>
+      <target dev='sda' bus='sata'/>
+      <boot order='1'/>
+    </disk>
+    {# macOS system disk (overlay of base image) #}
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='none' io='native'/>
+      <source file='{{ _storage }}/{{ vm.name }}.qcow2'/>
+      <target dev='sdb' bus='sata'/>
+      <boot order='2'/>
+    </disk>
+{% if vm.data_disk_gb is defined and vm.data_disk_gb | int > 0 %}
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='none' io='native'/>
+      <source file='{{ _storage }}/{{ vm.name }}-data.qcow2'/>
+      <target dev='sdc' bus='sata'/>
+    </disk>
+{% endif %}
+    <controller type='sata' index='0'/>
+    <controller type='usb' model='qemu-xhci' index='0'/>
+    <controller type='pci' model='pcie-root'/>
+    <controller type='pci' model='pcie-root-port'/>
+    <controller type='pci' model='pcie-root-port'/>
+    <controller type='pci' model='pcie-root-port'/>
+    <controller type='pci' model='pcie-root-port'/>
+    {# user-net + hostfwd entirely via qemu:commandline below; no libvirt
+       <interface> element, matching the validated hand-written XML #}
+    <input type='tablet' bus='usb'/>
+    <input type='keyboard' bus='usb'/>
+    <graphics type='vnc' port='{{ _vnc_port }}' listen='{{ vm.graphics_listen | default('127.0.0.1') }}'>
+      <listen type='address' address='{{ vm.graphics_listen | default('127.0.0.1') }}'/>
+    </graphics>
+    <video>
+      <model type='none'/>
+    </video>
+    <serial type='pty'>
+      <target type='isa-serial' port='0'/>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+  </devices>
+  <qemu:commandline>
+    <qemu:arg value='-device'/>
+    <qemu:arg value='isa-applesmc,osk={{ macos_osk }}'/>
+    <qemu:arg value='-smbios'/>
+    <qemu:arg value='type=2'/>
+    <qemu:arg value='-device'/>
+    <qemu:arg value='vmware-svga,addr=0x1e'/>
+    <qemu:arg value='-netdev'/>
+    <qemu:arg value='user,id=net0,hostfwd=tcp::{{ _ssh_port }}-:22'/>
+    <qemu:arg value='-device'/>
+    <qemu:arg value='virtio-net-pci,netdev=net0,mac={{ vm.mac }},addr=0x05'/>
+  </qemu:commandline>
+</domain>

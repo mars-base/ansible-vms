@@ -10,6 +10,21 @@ ovmf_vars_ms: /usr/share/OVMF/OVMF_VARS.ms.fd
 ovmf_code: /usr/share/OVMF/OVMF_CODE.fd
 ovmf_vars: /usr/share/OVMF/OVMF_VARS.fd
 
+# macOS (Hackintosh) assets. These live outside the repo, copied from OSX-KVM
+# once (see docs/macos.md). base image + OpenCore EFI are shared read-only
+# templates; each VM gets its own qcow2 overlay of OpenCore and its own nvram.
+macos_asset_dir: /home/fish/bucket/kvm/macos
+macos_opencore_image: "{{ macos_asset_dir }}/OpenCore.qcow2"
+# OSX-KVM's bundled OVMF_CODE_4M.fd uses a RAM-backed/EmuVariable store that
+# never reads or writes the on-disk VARS file, so any blessed NVRAM is invisible
+# to it. Use the host's own distro persistent pair instead (see docs/macos.md).
+macos_ovmf_code: /usr/share/OVMF/OVMF_CODE_4M.fd
+# Baked on a q35 machine whose SATA is the built-in controller (PCI 1f:2), which
+# is what libvirt's <controller type='sata'> also resolves to -- see docs/macos.md.
+macos_ovmf_vars_template: "{{ macos_asset_dir }}/OVMF_VARS-blessed.fd"
+macos_osk: "ourhardworkbythesewordsguardedpleasedontsteal(c)AppleComputerInc"
+macos_cpu_model: Skylake-Client
+
 qemu_emulator: /usr/bin/qemu-system-x86_64
 
 # Architecture defaults

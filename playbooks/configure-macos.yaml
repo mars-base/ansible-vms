@@ -1,0 +1,114 @@
+---
+
+# One-time bootstrap for macOS VMs: set static IP + DNS over the temporary
+# DHCP address the fresh overlay gets on first boot. The macOS base image has
+# no cloud-init, so network setup happens after the fact, over SSH.
+#
+# Usage:
+#   ap playbooks/configure-macos.yaml -e vm_name=macos-sonoma-01 -e boot_ip=10.241.20.123
+#
+#   boot_ip = the DHCP-assigned address to connect to (find it with:
+#   `arp -an | grep <mac>` or the host's lease db). After this run the VM
+#   answers on the static `ip` column from vms.csv.
+
+- name: Configure macOS VM network
+  gather_facts: false
+  hosts: "{{ 'local' | default('localhost') }}"
+  connection: local
+  become: true
+  become_user: root
+  become_method: sudo
+
+  vars:
+    vm_name: ""
+    boot_ip: ""
+
+  tasks:
+    - name: Check inputs
+      assert:
+        that:
+          - vm_name | length > 0
+          - boot_ip | length > 0
+        fail_msg: "Required: -e vm_name=<name> -e boot_ip=<DHCP address>. See docs/macos.md."
+
+    - name: Read vms.csv
+      read_csv:
+        path: "{{ vm_csv_file | default(inventory_dir + '/vms.csv') }}"
+      register: _vms_csv
+      delegate_to: localhost
+
+    - name: Select VM row
+      set_fact:
+        vm: "{{ _vms_csv.list | selectattr('name', 'equalto', vm_name) | list }}"
+
+    - name: Check VM row exists and is macOS
+      assert:
+        that:
+          - vm | length == 1
+          - vm[0].type == 'macos'
+          - vm[0].ip | default('') | length > 0
+        fail_msg: "'{{ vm_name }}' not found in vms.csv, or not a macos VM with static ip set."
+
+    - name: Compute dotted netmask from CIDR prefix
+      vars:
+        pfx: "{{ vm[0].netmask | default(24) | int }}"
+      set_fact:
+        _netmask_dotted: >-
+          {% set n = (2 ** pfx - 1) * 2 ** (32 - pfx) %}
+          {{ (n // 2**24) }}.{{ (n // 2**16) % 256 }}.{{ (n // 2**8) % 256 }}.{{ n % 256 }}
+
+    - name: Wait for SSH on the boot IP
+      wait_for:
+        host: "{{ boot_ip }}"
+        port: 22
+        timeout: 120
+
+    - name: Find BSD interface with the configured MAC
+      vars:
+        ansible_connection: ssh
+        ansible_host: "{{ boot_ip }}"
+        ansible_user: admin
+        ansible_ssh_pass: admin
+        ansible_become: true
+        ansible_become_method: sudo
+        ansible_become_pass: admin
+        ansible_become_flags: "-S"
+      shell: >-
+        networksetup -listallhardwareports |
+        awk -v mac='{{ vm[0].mac | lower }}'
+        '/^Device:/{dev=$2} /^[[:space:]]*Ethernet Address:/{if(tolower($3)==mac){print dev; exit}}'
+      register: _iface
+      changed_when: false
+
+    - name: Check interface found
+      assert:
+        that: _iface.stdout | trim | length > 0
+        fail_msg: "No interface with MAC {{ vm[0].mac }} found on {{ boot_ip }}."
+
+    - name: Set static IP + DNS
+      vars:
+        ansible_connection: ssh
+        ansible_host: "{{ boot_ip }}"
+        ansible_user: admin
+        ansible_ssh_pass: admin
+        ansible_become: true
+        ansible_become_method: sudo
+        ansible_become_pass: admin
+        ansible_become_flags: "-S"
+      shell: |
+        networksetup -setmanual "{{ _iface.stdout | trim }}" {{ vm[0].ip }} {{ _netmask_dotted }} {{ vm[0].gateway }}
+        networksetup -setdnsservers "{{ _iface.stdout | trim }}" {{ vm[0].dns | replace(',', ' ') }}
+
+    - name: Verify the static IP answers
+      wait_for:
+        host: "{{ vm[0].ip }}"
+        port: 22
+        timeout: 60
+
+    - name: Done
+      debug:
+        msg: >-
+          {{ vm_name }} is now on {{ vm[0].ip }}.
+          Add it to hosts.ini as an inventory host
+          (ansible_user=admin, ansible_ssh_pass/admin_become_pass=admin,
+          become_flags='-S'), then: ansible {{ vm_name }} -m ping

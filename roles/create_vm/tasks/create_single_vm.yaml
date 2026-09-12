@@ -24,6 +24,23 @@
         state: directory
         mode: "0755"
 
+    - name: "Check macOS assets exist for {{ vm.name }}"
+      stat:
+        path: "{{ item }}"
+      register: _macos_assets
+      loop:
+        - "{{ vm.base_image }}"
+        - "{{ macos_opencore_image }}"
+        - "{{ macos_ovmf_code }}"
+        - "{{ macos_ovmf_vars_template }}"
+      when: vm.type | default('linux') == 'macos'
+
+    - name: "Assert macOS assets are present for {{ vm.name }}"
+      assert:
+        that: _macos_assets.results | map(attribute='stat.exists') | select | length == _macos_assets.results | length
+        fail_msg: "Missing macOS asset(s). Copy them to {{ macos_asset_dir }} first (see docs/macos.md)."
+      when: vm.type | default('linux') == 'macos'
+
     - name: "Create qcow2 overlay for {{ vm.name }}"
       shell: |
         qemu-img create -f qcow2 -F qcow2 \
@@ -40,11 +57,21 @@
 
     - name: "Copy OVMF VARS for {{ vm.name }}"
       copy:
-        src: "{{ ovmf_vars_ms if vm.type | default('linux') == 'windows' else ovmf_vars }}"
+        src: "{{ macos_ovmf_vars_template if vm.type | default('linux') == 'macos' else (ovmf_vars_ms if vm.type | default('linux') == 'windows' else ovmf_vars) }}"
         dest: "{{ _vm_storage_dir }}/{{ vm.name }}-OVMF_VARS.fd"
         remote_src: true
         mode: "0644"
       when: (vm.firmware | default('')) | length > 0 and vm.firmware == 'efi'
+
+    - name: "Create OpenCore EFI overlay for {{ vm.name }}"
+      shell: |
+        qemu-img create -f qcow2 -F qcow2 \
+          -b "{{ macos_opencore_image }}" \
+          "{{ _vm_storage_dir }}/{{ vm.name }}-OpenCore.qcow2"
+      args:
+        creates: "{{ _vm_storage_dir }}/{{ vm.name }}-OpenCore.qcow2"
+      when: vm.type | default('linux') == 'macos'
+
 
     # Linux cloud-init: generate seed ISO
     - name: "Create cloud-init directory for {{ vm.name }}"

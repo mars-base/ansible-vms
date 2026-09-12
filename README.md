@@ -30,6 +30,7 @@ ap playbooks/create-vm.yaml
 - [VM Lifecycle](docs/vm-lifecycle.md) - Start, stop, restart, destroy VMs
 - [Snapshots](docs/snapshots.md) - Create and restore VM snapshots
 - [User Accounts](docs/setup-user.md) - Setup Linux user accounts
+- [macOS VMs](docs/macos.md) - Hackintosh guests, blessed NVRAM, keyboard-free boot
 
 ### Storage
 - [Data Disks](docs/data-disks.md) - Attach, resize, and mount data disks
