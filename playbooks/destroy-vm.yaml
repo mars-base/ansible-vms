@@ -63,6 +63,27 @@
           changed_when: false
           when: _vm_state.stdout == 'running'
 
+        - name: Check for snapshots
+          shell: virsh snapshot-list {{ _vms[0].name }} --name
+          register: _snaps
+          changed_when: false
+
+        - name: Collect snapshot names
+          set_fact:
+            _snap_list: "{{ _snaps.stdout.split() }}"
+
+        - name: Refuse destroy while snapshots exist
+          assert:
+            that: _snap_list | length == 0
+            fail_msg: >-
+              VM '{{ _vms[0].name }}' has snapshot(s):
+              {{ _snap_list | join(', ') }}.
+              Destroy is blocked because snapshots keep external disk
+              references that would corrupt on delete. Remove ALL snapshots
+              first, e.g.:
+              virsh snapshot-delete {{ _vms[0].name }} <snapshot-name>
+              (one per listed snapshot), then re-run destroy.
+
         - name: Undefine VM
           shell: virsh undefine {{ _vms[0].name }} --nvram
           register: _undefine
@@ -76,6 +97,7 @@
         path: "{{ _storage_dir }}"
         state: absent
       register: _delete_files
+      when: _vm_check.rc != 0 or _undefine is changed
 
     - name: Show result
       debug:
