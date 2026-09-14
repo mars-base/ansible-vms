@@ -80,9 +80,9 @@
               {{ _snap_list | join(', ') }}.
               Destroy is blocked because snapshots keep external disk
               references that would corrupt on delete. Remove ALL snapshots
-              first, e.g.:
-              virsh snapshot-delete {{ _vms[0].name }} <snapshot-name>
-              (one per listed snapshot), then re-run destroy.
+              first with the snapshot playbook, e.g.:
+              ap playbooks/snapshot-vm.yaml -e vm_name={{ _vms[0].name }} -e snap_action=delete -e snapshot_name=<snapshot-name> -e confirm=true
+              (once per listed snapshot), then re-run destroy.
 
         - name: Undefine VM
           shell: virsh undefine {{ _vms[0].name }} --nvram
