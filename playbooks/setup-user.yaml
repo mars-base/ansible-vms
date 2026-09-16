@@ -10,6 +10,12 @@
 #
 #   # Multiple VMs (using host group, Windows hosts auto-skipped)
 #   ap playbooks/setup-user.yaml -e "HOSTS=vm_dev" -e "username=diwen"
+#
+#   # Fix UID (and optionally GID) so the user has the same numeric id on every host.
+#   # If user_uid/user_gid are not supplied, defaults to the current control-host
+#   # UID/GID (i.e. the operator running ansible), so NFS/file-perms line up.
+#   ap playbooks/setup-user.yaml -e "HOSTS=vm_dev" -e "username=diwen" -e "user_uid=2000"
+#   ap playbooks/setup-user.yaml -e "HOSTS=vm_dev" -e "username=diwen" -e "user_uid=2000" -e "user_gid=2000"
 
 - name: Setup user account
   hosts: "{{ HOSTS | default('vms') }}"
@@ -19,6 +25,8 @@
     _username: "{{ username | default('admin') }}"
     _user_shell: "{{ user_shell | default('/bin/bash') }}"
     _user_groups: "{{ user_groups | default('wheel' if ansible_distribution in ['Fedora', 'CentOS', 'RedHat', 'Rocky', 'AlmaLinux'] else 'sudo') }}"
+    _user_uid: "{{ user_uid | default(None) }}"
+    _user_gid: "{{ user_gid | default(None) }}"
     _ssh_pubkey_file: "{{ ssh_pubkey | default('~/.ssh/id_rsa.pub') }}"
     _passwordless_sudo: "{{ passwordless_sudo | default(true) }}"
 
@@ -33,6 +41,20 @@
       ansible.builtin.set_fact:
         ssh_key: "{{ pubkey_content.content | b64decode | trim }}"
 
+    - name: Detect control-host UID/GID (default when user_uid/user_gid not given)
+      ansible.builtin.shell: id -u; id -g
+      register: _control_ids
+      delegate_to: localhost
+      changed_when: false
+      run_once: true
+      when: _user_uid is none or _user_gid is none
+
+    - name: Resolve effective UID/GID
+      ansible.builtin.set_fact:
+        _effective_uid: "{{ user_uid if user_uid is defined else _control_ids.stdout_lines[0] | int }}"
+        _effective_gid: "{{ user_gid if user_gid is defined else _control_ids.stdout_lines[1] | int }}"
+      run_once: true
+
     - name: Skip non-Linux hosts
       ansible.builtin.debug:
         msg: "Skipped {{ inventory_hostname }} (OS: {{ ansible_system | default('unknown') }}) — setup-user only supports Linux"
@@ -42,9 +64,17 @@
       become: true
       when: ansible_system | default('') == 'Linux'
       block:
+        - name: Create primary group with fixed GID
+          ansible.builtin.group:
+            name: "{{ _username }}"
+            gid: "{{ _effective_gid }}"
+            state: present
+
         - name: Create user
           ansible.builtin.user:
             name: "{{ _username }}"
+            uid: "{{ _effective_uid }}"
+            group: "{{ _username }}"
             shell: "{{ _user_shell }}"
             groups: "{{ _user_groups }}"
             append: true
@@ -67,4 +97,4 @@
 
         - name: Display result
           ansible.builtin.debug:
-            msg: "User {{ _username }} configured on {{ inventory_hostname }}"
+            msg: "User {{ _username }} (uid={{ _effective_uid }}, gid={{ _effective_gid }}) configured on {{ inventory_hostname }}"
