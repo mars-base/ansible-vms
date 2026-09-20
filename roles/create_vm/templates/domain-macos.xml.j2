@@ -13,8 +13,6 @@
   <currentMemory unit='KiB'>{{ vm.memory_mb | int * 1024 }}</currentMemory>
   <vcpu placement='static'>{{ vm.vcpus }}</vcpu>
 {% set _storage = (vm.storage_dir if vm.storage_dir | default('') | length > 0 else vm_images_dir) ~ '/' ~ vm.name %}
-{% set _mac_last = vm.mac.split(':')[-1] %}
-{% set _vnc_port = 5900 + (_mac_last | int(base=16)) %}
   <os>
     <type arch='x86_64' machine='q35'>hvm</type>
     <loader readonly='yes' type='pflash'>{{ macos_ovmf_code }}</loader>
@@ -91,7 +89,7 @@
     </interface>
     <input type='tablet' bus='usb'/>
     <input type='keyboard' bus='usb'/>
-    <graphics type='vnc' port='{{ _vnc_port }}' listen='{{ vm.graphics_listen | default('127.0.0.1') }}'>
+    <graphics type='vnc' autoport='yes' listen='{{ vm.graphics_listen | default('127.0.0.1') }}'>
       <listen type='address' address='{{ vm.graphics_listen | default('127.0.0.1') }}'/>
     </graphics>
     <video>

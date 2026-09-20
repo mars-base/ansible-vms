@@ -52,7 +52,7 @@ No need to copy: `BaseSystem.img`, `fetch-macOS-v2.py`,
 Add a row with `type=macos`. `disk_gb` **must** equal the base image's virtual
 size (64). macOS uses DHCP, so **leave ip/netmask/gateway/dns empty** (set
 them only if you want a static IP via `configure-macos.yaml`). The VNC port is
-derived from the MAC's last hex byte (`5900 + hex`).
+auto-assigned by libvirt (`list-vms` shows the actual port).
 
 ```csv
 macos-sonoma-01,local,macos,8192,4,macos-sonoma,64,0,/home/fish/bucket/kvm/macos/macos-sonoma-base.img,br0,52:54:00:ff:00:01,efi,false,/home/fish/bucket/kvm/macos,,,,,
