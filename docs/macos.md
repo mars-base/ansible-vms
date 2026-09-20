@@ -108,6 +108,29 @@ ap playbooks/destroy-vm.yaml -e vm_name=macos-sonoma-01 -e confirm=true
 Stop the VM first (see above). The shared base image and assets are never
 touched.
 
+## Snapshots
+
+macOS domains boot via pflash OVMF with a RAW NVRAM file, so libvirt
+refuses full (memory-included) snapshots. The snapshot playbook
+automatically falls back to **disk-only** snapshots for macOS:
+
+```bash
+# snapshot a running VM (disk-only)
+ap playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=create -e halt=false
+
+# revert (VM must be shut off first; playbook tells you)
+ap playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=restore -e snapshot_name=<snap> -e confirm=true
+```
+
+Limitations to know:
+
+- NVRAM is **not** part of the snapshot — boot state never reverts
+- With `halt=true` the playbook aborts with a notice: macOS ignores ACPI,
+  so shut it down yourself first (desktop or SSH) if you want a consistent
+  snapshot
+- APFS on AHCI has no TRIM, so space reclaimed by deleting snapshots is
+  limited
+
 ## Template constraints (domain-macos.xml.j2)
 
 Three details must match the validated hand-built config; each violation

@@ -75,6 +75,10 @@
         that: _vm_check.rc == 0
         fail_msg: "VM '{{ vm_name }}' is not defined in libvirt. Create it first with create-vm.yaml"
 
+    - name: Detect macOS guest
+      set_fact:
+        _is_macos: "{{ _vms[0].type | default('linux') == 'macos' }}"
+
     # ===== CREATE =====
 
     - name: Generate snapshot timestamp
@@ -94,9 +98,18 @@
       changed_when: false
       when: snap_action == 'create' and halt | default(true) | bool
 
+    - name: macOS cannot be halted gracefully - abort
+      fail:
+        msg: >-
+          '{{ vm_name }}' is macOS and does NOT respond to ACPI shutdown, so the
+          playbook cannot stop it for a consistent snapshot. Either shut it down
+          yourself first (desktop Apple menu, or: ssh admin@<ip> 'sudo shutdown -h now'),
+          or create a disk-only snapshot of the running VM with -e halt=false.
+      when: snap_action == 'create' and _is_macos and halt | default(true) | bool
+
     - name: Shutdown VM for snapshot
       shell: virsh shutdown {{ _vms[0].name }}
-      when: snap_action == 'create' and halt | default(true) | bool and _vm_state_before.stdout == 'running'
+      when: snap_action == 'create' and not _is_macos and halt | default(true) | bool and _vm_state_before.stdout == 'running'
 
     - name: Wait for VM to stop
       shell: virsh domstate {{ _vms[0].name }}
@@ -105,16 +118,21 @@
       retries: 90
       delay: 2
       changed_when: false
-      when: snap_action == 'create' and halt | default(true) | bool and _vm_state_before.stdout == 'running'
+      when: snap_action == 'create' and not _is_macos and halt | default(true) | bool and _vm_state_before.stdout == 'running'
+
+    - name: Create macOS snapshot (disk-only)
+      shell: "virsh snapshot-create-as {{ _vms[0].name }} {{ _snapshot_name }} --disk-only{% if snapshot_desc is defined and snapshot_desc != '' %} --description '{{ snapshot_desc }}'{% endif %}"
+      register: _snapshot_create
+      when: snap_action == 'create' and _is_macos
 
     - name: Create snapshot
       shell: "virsh snapshot-create-as {{ _vms[0].name }} {{ _snapshot_name }}{% if snapshot_desc is defined and snapshot_desc != '' %} --description '{{ snapshot_desc }}'{% endif %}"
       register: _snapshot_create
-      when: snap_action == 'create'
+      when: snap_action == 'create' and not _is_macos
 
     - name: Restart VM after snapshot
       shell: virsh start {{ _vms[0].name }}
-      when: snap_action == 'create' and halt | default(true) | bool and _vm_state_before.stdout == 'running'
+      when: snap_action == 'create' and not _is_macos and halt | default(true) | bool and _vm_state_before.stdout == 'running'
 
     # ===== RESTORE =====
 
@@ -137,9 +155,18 @@
       changed_when: false
       when: snap_action == 'restore'
 
+    - name: macOS must be shut off before restore - abort
+      fail:
+        msg: >-
+          '{{ vm_name }}' is macOS running, and a disk-only snapshot can only be
+          reverted while the VM is off. Shut it down first (desktop Apple menu,
+          or: ssh admin@<ip> 'sudo shutdown -h now'), then re-run the restore.
+          Note: NVRAM is not part of the snapshot — boot state is not reverted.
+      when: snap_action == 'restore' and _is_macos and _vm_state_before_restore.stdout == 'running'
+
     - name: Shutdown VM before restore
       shell: "virsh shutdown {{ _vms[0].name }}"
-      when: snap_action == 'restore' and _vm_state_before_restore.stdout == 'running'
+      when: snap_action == 'restore' and not _is_macos and _vm_state_before_restore.stdout == 'running'
 
     - name: Wait for VM to stop before restore
       shell: "virsh domstate {{ _vms[0].name }}"
@@ -148,7 +175,7 @@
       retries: 90
       delay: 2
       changed_when: false
-      when: snap_action == 'restore' and _vm_state_before_restore.stdout == 'running'
+      when: snap_action == 'restore' and not _is_macos and _vm_state_before_restore.stdout == 'running'
 
     - name: Restore to snapshot
       shell: "virsh snapshot-revert {{ _vms[0].name }} {{ snapshot_name }}"
