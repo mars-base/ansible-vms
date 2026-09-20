@@ -116,7 +116,7 @@ automatically falls back to **disk-only** snapshots for macOS:
 
 ```bash
 # snapshot a running VM (disk-only)
-ap playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=create -e halt=false
+ap playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=create -e snapshot_name=my-snap -e halt=false
 
 # revert (VM must be shut off first; playbook tells you)
 ap playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=restore -e snapshot_name=<snap> -e confirm=true

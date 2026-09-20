@@ -36,9 +36,14 @@
       register: _vm_state
       changed_when: false
 
-    - name: Stop VM (graceful shutdown)
+    - name: "Stop VM {{ vm_name }} (graceful shutdown)"
       shell: virsh shutdown {{ _vms[0].name }}
       when: _vm_state.stdout == 'running' and _vms[0].type | default('linux') != 'macos'
+
+    - name: Show VM info
+      debug:
+        msg: "VM '{{ _vms[0].name }}' is {{ (_vm_state.stdout == 'running') | ternary('shutting down', 'already stopped') }} (host: {{ inventory_hostname }})"
+      when: _vms[0].type | default('linux') != 'macos'
 
     - name: macOS shutdown notice
       debug:

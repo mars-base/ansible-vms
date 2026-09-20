@@ -36,6 +36,11 @@
       register: _vm_state
       changed_when: false
 
-    - name: Start VM
+    - name: "Start VM {{ vm_name }}"
       shell: virsh start {{ _vms[0].name }}
       when: _vm_state.stdout != 'running'
+
+    - name: Show VM info
+      debug:
+        msg: "VM '{{ _vms[0].name }}' is {{ (_vm_state.stdout == 'running') | ternary('already running', 'started') }} (host: {{ inventory_hostname }})"
+

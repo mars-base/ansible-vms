@@ -3,12 +3,12 @@
 # Manage VM snapshots (create, list, restore, delete)
 # Usage:
 #   # Create snapshot (default: shutdown VM first for disk consistency)
-#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create
+#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e snapshot_name=before-upgrade
 #
 #   # Create snapshot without shutdown (live snapshot, faster but less safe)
-#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e halt=false
+#   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e snapshot_name=before-upgrade -e halt=false
 #
-#   # Create snapshot with custom name and description
+#   # Create snapshot with description
 #   ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e snapshot_name=before-upgrade -e snapshot_desc="Before kernel upgrade"
 #
 #   # List all snapshots
@@ -37,11 +37,11 @@
         that: snap_action is defined and snap_action in ['create', 'list', 'restore', 'delete']
         fail_msg: "snap_action is required and must be one of: create, list, restore, delete"
 
-    - name: Check snapshot_name for restore/delete
+    - name: Check snapshot_name is specified
       assert:
         that: snapshot_name is defined and snapshot_name != ''
-        fail_msg: "snapshot_name is required for {{ snap_action }} action. Usage: -e snapshot_name=<name>"
-      when: snap_action in ['restore', 'delete']
+        fail_msg: "snapshot_name is required. Usage: -e snapshot_name=<name>"
+      when: snap_action in ['create', 'restore', 'delete']
 
     - name: Check confirm flag for restore/delete
       assert:
@@ -81,17 +81,6 @@
 
     # ===== CREATE =====
 
-    - name: Generate snapshot timestamp
-      shell: date +%Y%m%d-%H%M%S
-      register: _snap_timestamp
-      changed_when: false
-      when: snap_action == 'create' and (snapshot_name is not defined or snapshot_name == '')
-
-    - name: Set snapshot name
-      set_fact:
-        _snapshot_name: "{{ snapshot_name if (snapshot_name is defined and snapshot_name != '') else 'snap-' + _snap_timestamp.stdout }}"
-      when: snap_action == 'create'
-
     - name: Check VM state before halt
       shell: virsh domstate {{ _vms[0].name }}
       register: _vm_state_before
@@ -121,12 +110,12 @@
       when: snap_action == 'create' and not _is_macos and halt | default(true) | bool and _vm_state_before.stdout == 'running'
 
     - name: Create macOS snapshot (disk-only)
-      shell: "virsh snapshot-create-as {{ _vms[0].name }} {{ _snapshot_name }} --disk-only{% if snapshot_desc is defined and snapshot_desc != '' %} --description '{{ snapshot_desc }}'{% endif %}"
+      shell: "virsh snapshot-create-as {{ _vms[0].name }} {{ snapshot_name }} --disk-only{% if snapshot_desc is defined and snapshot_desc != '' %} --description '{{ snapshot_desc }}'{% endif %}"
       register: _snapshot_create
       when: snap_action == 'create' and _is_macos
 
     - name: Create snapshot
-      shell: "virsh snapshot-create-as {{ _vms[0].name }} {{ _snapshot_name }}{% if snapshot_desc is defined and snapshot_desc != '' %} --description '{{ snapshot_desc }}'{% endif %}"
+      shell: "virsh snapshot-create-as {{ _vms[0].name }} {{ snapshot_name }}{% if snapshot_desc is defined and snapshot_desc != '' %} --description '{{ snapshot_desc }}'{% endif %}"
       register: _snapshot_create
       when: snap_action == 'create' and not _is_macos
 
@@ -210,7 +199,7 @@
 
     - name: Show create result
       debug:
-        msg: "Snapshot '{{ _snapshot_name }}' created for VM '{{ vm_name }}'"
+        msg: "Snapshot '{{ snapshot_name }}' created for VM '{{ vm_name }}'"
       when: snap_action == 'create'
 
     - name: Show restore result
