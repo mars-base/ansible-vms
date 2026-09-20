@@ -98,6 +98,15 @@
       register: _vm_state
       changed_when: false
 
+    - name: macOS must be shut off before resize - abort
+      fail:
+        msg: >-
+          '{{ vm_name }}' is macOS and is running. Resizing needs the disk
+          free, but macOS ignores ACPI shutdown, so this playbook cannot stop
+          it. Shut it down yourself first (desktop Apple menu, or
+          ssh admin@<ip> 'sudo shutdown -h now'), then re-run the resize.
+      when: _vms[0].type | default('linux') == 'macos' and _vm_state.stdout == 'running'
+
     - name: Shutdown VM for resize
       when: _vm_state.stdout == 'running'
       block:
@@ -124,4 +133,4 @@
         msg:
           - "Data disk resized: {{ _current_gb }}G -> {{ _target_gb }}G"
           - "Expand filesystem inside VM:"
-          - "{{ '  PowerShell: Resize-Partition -DriveLetter <letter> -Size ((Get-PartitionSupportedSize -DriveLetter <letter>).SizeMax)' if _vms[0].type | default('linux') == 'windows' else '  resize2fs /dev/vdb' }}"
+          - "{{ '  PowerShell: Resize-Partition -DriveLetter <letter> -Size ((Get-PartitionSupportedSize -DriveLetter <letter>).SizeMax)' if _vms[0].type | default('linux') == 'windows' else ('  macOS (APFS): diskutil apfs resizeContainer <disk>N 0   # 0 = use all freed space' if _vms[0].type | default('linux') == 'macos' else '  resize2fs /dev/vdb') }}"

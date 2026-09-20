@@ -33,6 +33,21 @@
         that: _vms | length > 0
         fail_msg: "VM '{{ vm_name }}' not found in vms.csv for host '{{ inventory_hostname }}'"
 
+    - name: Detect macOS guest
+      set_fact:
+        _is_macos: "{{ _vms[0].type | default('linux') == 'macos' }}"
+
+    - name: macOS cannot hot-plug a data disk - abort
+      fail:
+        msg: >-
+          '{{ vm_name }}' is macOS. Its disks sit on q35's built-in SATA
+          controller, which libvirt cannot hotplug, and macOS has no virtio-blk
+          driver — so this playbook would attach a disk the guest can't see.
+          The data disk is created automatically when the VM is built: set
+          data_disk_gb > 0 in vms.csv and run create-vm.yaml (a macOS VM that
+          already exists must be destroyed and recreated to add the column).
+      when: _is_macos
+
     - name: Check data_disk_gb in vms.csv
       assert:
         that: _vms[0].data_disk_gb | default('') | length > 0 and _vms[0].data_disk_gb | int > 0

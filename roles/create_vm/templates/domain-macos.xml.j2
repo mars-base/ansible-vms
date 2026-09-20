@@ -49,6 +49,13 @@
     <suspend-to-mem enabled='no'/>
     <suspend-to-disk enabled='no'/>
   </pm>
+  {# AppArmor off: an external snapshot nests the shared OpenCore.qcow2 /
+     base.img deeper in the backing chain (…→.inited→overlay→base). libvirt's
+     virt-aa-helper only allows files named in the XML (source + one
+     backingStore), so the deeper shared assets get denied on boot. The
+     qemu:commandline custom devices already put this domain outside the
+     standard confined-qemu model anyway. #}
+  <seclabel type='none'/>
   <devices>
     <emulator>{{ qemu_emulator }}</emulator>
     {# OpenCore EFI disk (overlay of shared base) #}

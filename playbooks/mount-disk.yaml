@@ -25,7 +25,7 @@
 #   -t mount      # only mount the disk
 
 - name: Mount disk on VM
-  gather_facts: true
+  gather_facts: false
   hosts: "{{ HOSTS | default('kvm_hosts') }}"
   become: true
   become_user: root
@@ -45,6 +45,31 @@
           - disk_device | length > 0
           - mount_point | length > 0
         fail_msg: "disk_device and mount_point are required"
+
+    # ── macOS guard ─────────────────────────────────────────────────────
+    # This playbook is Linux-only (apt/parted/mkfs.ext4/fstab) and needs a
+    # Python interpreter on the target, which macOS guests lack. Detect via
+    # vms.csv on the controller and abort with a diskutil pointer instead of
+    # failing halfway with "python not found".
+    - name: Read vms.csv (controller)
+      read_csv:
+        path: "{{ inventory_dir }}/vms.csv"
+      register: _vms_csv
+      delegate_to: localhost
+
+    - name: Detect macOS guest
+      set_fact:
+        _is_macos: "{{ (_vms_csv.list | selectattr('name', 'equalto', inventory_hostname)
+                        | map(attribute='type') | first | default('linux')) == 'macos' }}"
+
+    - name: macOS disks are managed with diskutil, not this playbook - abort
+      fail:
+        msg: >-
+          '{{ inventory_hostname }}' is macOS. This playbook is Linux-only
+          (parted/mkfs.ext4/fstab) and macOS guests have no Python for
+          Ansible. Format and mount the data disk inside macOS instead:
+            sudo diskutil apfs addVolume disk2 APFS Data -mountPath /Volumes/Data
+      when: _is_macos
 
     # ── Pre-flight checks ─────────────────────────────────────────────
     - name: Check disk device exists

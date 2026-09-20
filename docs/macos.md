@@ -51,8 +51,14 @@ No need to copy: `BaseSystem.img`, `fetch-macOS-v2.py`,
 
 Add a row with `type=macos`. `disk_gb` **must** equal the base image's virtual
 size (64). macOS uses DHCP, so **leave ip/netmask/gateway/dns empty** (set
-them only if you want a static IP via `configure-macos.yaml`). The VNC port is
+them only if you want a static IP — see [Static IP](#static-ip-optional)). The VNC port is
 auto-assigned by libvirt (`list-vms` shows the actual port).
+
+**Data disk**: set the `data_disk_gb` column (8th) to a size > 0 to attach an
+extra SATA disk (`sdc`) on the same built-in AHCI controller — macOS sees it
+natively, no kext needed. Like Linux/Windows guests, the SATA bus can **not**
+be hotplugged, so set it at create time (or cold-`attach` + reboot); the
+column is ignored on an already-created VM.
 
 ```csv
 macos-sonoma-01,local,macos,8192,4,macos-sonoma,64,0,/home/fish/bucket/kvm/macos/macos-sonoma-base.img,br0,52:54:00:ff:00:01,efi,false,/home/fish/bucket/kvm/macos,,,,,
@@ -79,6 +85,30 @@ and the VNC column shows `127.0.0.1:<port>`.
 
 > Ansible against macOS guests must use `-m raw` — the guest has no Python
 > interpreter.
+
+### Static IP (optional)
+
+To switch a macOS VM from DHCP to a custom static IP, do it in two steps:
+
+1. **Define the network in `vms.csv` first** — fill the `ip`, `netmask`
+   (CIDR prefix, e.g. `22`), `gateway` and `dns` columns (all four are
+   required; `configure-macos.yaml` asserts this before touching the guest):
+
+   ```csv
+   ...,efi,false,/home/fish/bucket/kvm/macos,192.168.100.45,24,192.168.100.1,192.168.100.53,
+   ```
+
+2. **Run the playbook against the current (DHCP) address**:
+
+   ```bash
+   ap playbooks/configure-macos.yaml -e vm_name=macos-sonoma-01 -e boot_ip=192.168.100.45
+   ```
+
+   `boot_ip` is the DHCP address the VM answers on right now (find it with
+   `list-vms`). The playbook logs in over SSH, locates the BSD interface by
+   the VM's MAC, applies `networksetup -setmanual`/`-setdnsservers`, and
+   verifies the new static IP answers on port 22. After that, update (or add)
+   the VM's entry in `hosts.ini` with the static IP.
 
 ## Start
 
@@ -133,7 +163,7 @@ Limitations to know:
 
 ## Template constraints (domain-macos.xml.j2)
 
-Three details must match the validated hand-built config; each violation
+Four details must match the validated hand-built config; each violation
 looks like a different, unrelated bug:
 
 1. **Persistent OVMF**: the host's `/usr/share/OVMF/OVMF_CODE_4M.fd`, not
@@ -143,6 +173,13 @@ looks like a different, unrelated bug:
 3. **NIC pinned to root-bus `slot=0x05`**: macOS's virtio-net driver only
    binds at a fixed root-bus position — if libvirt auto-places the NIC on a
    `pcie-root-port` child, the guest never sees it
+4. **`<seclabel type='none'/>`**: an external (disk-only) snapshot nests the
+   shared `OpenCore.qcow2` / base image one level deeper in the backing chain
+   (… → `.inited` → overlay → base). libvirt's `virt-aa-helper` only allows
+   files named in the XML (source + one backingStore), so the deeper shared
+   assets are AppArmor-denied and the VM won't boot. Disabling per-domain
+   AppArmor is safe here — the `qemu:commandline` custom devices already put
+   this domain outside the standard confined-qemu model.
 
 Full rationale and the bless procedure:
 [macos-base-image.md](macos-base-image.md).

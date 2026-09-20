@@ -1,5 +1,12 @@
 # Data Disks
 
+> **macOS VMs**: the three playbooks below do **not** apply to macOS guests.
+> macOS disks sit on q35's built-in SATA controller (not hotpluggable, and no
+> virtio-blk driver), and macOS guests have no Python for Ansible. The data
+> disk is instead created automatically at VM-create time from the
+> `data_disk_gb` column (see [macos.md](macos.md)); each playbook detects
+> `type=macos` and aborts with a `diskutil` pointer.
+
 ## Attach Data Disk
 
 ```bash

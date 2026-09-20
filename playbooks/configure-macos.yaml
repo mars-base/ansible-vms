@@ -47,7 +47,10 @@
           - vm | length == 1
           - vm[0].type == 'macos'
           - vm[0].ip | default('') | length > 0
-        fail_msg: "'{{ vm_name }}' not found in vms.csv, or not a macos VM with static ip set."
+          - vm[0].netmask | default('') | length > 0
+          - vm[0].gateway | default('') | length > 0
+          - vm[0].dns | default('') | length > 0
+        fail_msg: "'{{ vm_name }}' not found in vms.csv, or not a macos VM with ip/netmask/gateway/dns all set."
 
     - name: Compute dotted netmask from CIDR prefix
       vars:
@@ -63,6 +66,7 @@
         port: 22
         timeout: 120
 
+    # raw, not shell: the macOS guest has no Python interpreter for modules
     - name: Find BSD interface with the configured MAC
       vars:
         ansible_connection: ssh
@@ -73,7 +77,7 @@
         ansible_become_method: sudo
         ansible_become_pass: admin
         ansible_become_flags: "-S"
-      shell: >-
+      raw: >-
         networksetup -listallhardwareports |
         awk -v mac='{{ vm[0].mac | lower }}'
         '/^Device:/{dev=$2} /^[[:space:]]*Ethernet Address:/{if(tolower($3)==mac){print dev; exit}}'
@@ -95,9 +99,7 @@
         ansible_become_method: sudo
         ansible_become_pass: admin
         ansible_become_flags: "-S"
-      shell: |
-        networksetup -setmanual "{{ _iface.stdout | trim }}" {{ vm[0].ip }} {{ _netmask_dotted }} {{ vm[0].gateway }}
-        networksetup -setdnsservers "{{ _iface.stdout | trim }}" {{ vm[0].dns | replace(',', ' ') }}
+      raw: "networksetup -setmanual {{ _iface.stdout | trim }} {{ vm[0].ip }} {{ _netmask_dotted }} {{ vm[0].gateway }} && networksetup -setdnsservers {{ _iface.stdout | trim }} {{ vm[0].dns | replace(',', ' ') }}"
 
     - name: Verify the static IP answers
       wait_for:
