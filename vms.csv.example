@@ -18,7 +18,8 @@
 #   storage_dir - Custom storage path (empty = default /var/lib/libvirt/images)
 #                 VM files stored in <storage_dir>/<vm-name>/
 #   ip          - Static IP address (empty = DHCP). Linux applies it via cloud-init
-#                 at first boot; macOS has no cloud-init so run
+#                 at first boot. macOS uses DHCP by default; leave empty unless
+#                 you want a static IP, in which case set it here and run
 #                 playbooks/configure-macos.yaml once after the VM boots.
 #   netmask     - Subnet CIDR (default: 22, e.g. 24 for 255.255.255.0)
 #   gateway     - Default gateway
@@ -35,4 +36,4 @@ my-ubuntu-vm,local,linux,2048,2,ubuntu2404,20,5,/path/to/ubuntu-24.04-server-clo
 my-fedora-vm,local,linux,2048,2,fedora44,20,5,/path/to/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms,,,,
 my-rocky-vm,local,linux,2048,2,rocky10,20,5,/path/to/Rocky-10-GenericCloud-Base.latest.x86_64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms,,,,
 my-linux-static,local,linux,2048,2,debian12,20,5,/path/to/debian-12-genericcloud-amd64.qcow2,br0,52:54:00:xx:xx:xx,,true,/data/vms,192.168.1.100,22,192.168.1.1,"8.8.8.8,8.8.4.4"
-my-macos-vm,local,macos,8192,4,macos-sonoma,128,0,/path/to/kvm/macos/macos-sonoma-base.img,br0,52:54:00:xx:xx:xx,efi,false,/data/vms,192.168.1.110,22,192.168.1.1,"8.8.8.8,8.8.4.4"
+my-macos-vm,local,macos,8192,4,macos-sonoma,64,0,/path/to/kvm/macos/macos-sonoma-base.img,br0,52:54:00:xx:xx:xx,efi,false,/data/vms,,,,
