@@ -15,8 +15,8 @@ constraints that make cold boot work **with zero keyboard input**.
 | SMC | — | `isa-applesmc,osk=...` required, via `qemu:commandline` |
 | Boot disk | system disk directly | OpenCore overlay (boot order 1) → macOS disk (order 2) |
 | Firmware | distro OVMF or SeaBIOS | **distro persistent OVMF** + a **pre-blessed** NVRAM template |
-| Network | libvirt `<interface>` | `user-net` + `hostfwd` via `qemu:commandline` (bootstrap SSH) |
-| Static IP | cloud-init at create time | `configure-macos.yaml` over SSH, one-time |
+| Network | libvirt `<interface>` | libvirt `<interface type='bridge'>`, virtio NIC **pinned to root-bus slot 0x05** (see Constraint 3) |
+| Static IP | cloud-init at create time | no cloud-init — set once inside the guest (there is **no DHCP on br0**) |
 | Keyboard via libvirt | works | **broken** (see below) — must boot without any input |
 
 ## Assets
@@ -40,10 +40,9 @@ The EFI **code** is the host's own `/usr/share/OVMF/OVMF_CODE_4M.fd` (see
 ## Creating a macOS VM
 
 1. Add a row to `vms.csv` with `type=macos`. `disk_gb` **must** equal the base
-   image's virtual size (128). `bridge`/`ip`/`netmask`/`gateway`/`dns` are used
-   only later by `configure-macos.yaml`; the running VM first comes up on
-   `user-net` with a `hostfwd` SSH port derived from the IP's last octet
-   (`2200 + last_octet`).
+   image's virtual size (128). `bridge`/`ip`/`netmask`/`gateway`/`dns` are the
+   static network the guest should end up on. The VNC port is derived from the
+   IP's last octet (`5900 + last_octet`).
 
    ```csv
    macos-sonoma-01,local,macos,8192,4,macos-sonoma,128,0,/home/fish/bucket/kvm/macos/macos-sonoma-base.img,br0,52:54:00:ff:00:01,efi,false,/home/fish/bucket/kvm,10.241.20.80,22,10.241.20.1,"10.246.80.210,10.246.180.210",
@@ -57,27 +56,34 @@ The EFI **code** is the host's own `/usr/share/OVMF/OVMF_CODE_4M.fd` (see
 
    This builds the two overlays (system disk + OpenCore), copies
    `OVMF_VARS-blessed.fd` to the per-VM NVRAM path, and defines/starts the
-   domain from `domain-macos.xml.j2`.
+   domain from `domain-macos.xml.j2` — a native `<interface type='bridge'>` on
+   `vm.bridge` with the virtio NIC pinned to root-bus slot `0x05`.
 
 3. Cold boot needs **no input**. Within ~40s the VM reaches the macOS login
-   window. Confirm over `hostfwd`:
+   window.
+
+4. **Set the static IP inside the guest** (br0 has no DHCP server, so the VM
+   is unreachable until this is done). Connect VNC
+   (`127.0.0.1:5900+<last_octet>`, e.g. `:80`), log in as `admin`/`admin`, and
+   either use System Settings → Network → Ethernet → Manual, or in Terminal:
 
    ```bash
-   ssh -p 2280 admin@127.0.0.1 'sw_vers'   # 2200 + 80
+   networksetup -setmanual "Ethernet" 10.241.20.80 255.255.252.0 10.241.20.1
+   networksetup -setdnsservers "Ethernet" 10.246.80.210 10.246.180.210
    ```
 
-4. One-time network bootstrap to the static IP from `vms.csv`:
+   This static config is written into the overlay and persists across reboots,
+   so a freshly-defined VM that reuses this base overlay boots already online.
+   From here `ssh admin@10.241.20.80` and `ansible <name> -m ping` (via `raw`;
+   the macOS guest has no Python interpreter for the fact-gathering modules).
 
-   ```bash
-   ap playbooks/configure-macos.yaml -e vm_name=macos-sonoma-01 -e boot_ip=<current-ip>
-   ```
+## Template constraints
 
-   Then add the host to `hosts.ini` and `ansible <name> -m ping`.
+Three details in `domain-macos.xml.j2` must match the validated hand-built
+config; each violation looks like a different, unrelated bug:
 
-## The two constraints that make keyboard-free boot work
-
-If a macOS VM stops at Apple's Startup Manager (disk picker) instead of booting,
-one of these two is violated.
+- Boot stops at Apple's Startup Manager (disk picker) → Constraint 1 or 2
+- `ifconfig -a` shows no NIC, Network says "Not connected" → Constraint 3
 
 ### Constraint 1 — persistent OVMF, not OSX-KVM's bundled CODE
 
@@ -105,6 +111,30 @@ while the disk sits on q35's built-in controller.
 > Historical note: this mismatch, not the (real but separate) libvirt keyboard
 > bug, was what blocked macOS integration for a while. Once the blessed NVRAM
 > matches `1f:2`, cold boot is fully keyboard-free in both bare qemu and libvirt.
+
+### Constraint 3 — the virtio NIC must be pinned to root-bus slot `0x05`
+
+macOS's virtio-net kext (loaded via OpenCore's `VirtualX.SMCRuntime`/`VirtioNet`
+bundle) only binds to a NIC at a **fixed root-bus position**. If libvirt is
+allowed to auto-place the NIC on a `pcie-root-port` child (`bus 0x01 slot 0x00`
+or similar), the guest never sees it — `ifconfig -a` shows no `enX`, and System
+Settings reports "Not connected" even after `networksetup -setmanual` writes the
+correct config (the config sits on a service whose hardware is gone).
+
+`domain-macos.xml.j2` pins the interface explicitly:
+
+```xml
+<interface type='bridge'>
+  <mac address='{{ vm.mac }}'/>
+  <source bridge='{{ vm.bridge }}'/>
+  <model type='virtio'/>
+  <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+</interface>
+```
+
+Slot `0x05` is the same one the earlier user-net `qemu:arg virtio-net-pci,...,addr=0x05`
+used successfully. Do not remove the `<address>` — libvirt will happily reassign
+it to a root-port child, and macOS will not enumerate the device.
 
 ### libvirt keyboard injection is dead for this guest
 

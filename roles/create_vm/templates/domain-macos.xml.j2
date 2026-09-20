@@ -14,7 +14,6 @@
   <vcpu placement='static'>{{ vm.vcpus }}</vcpu>
 {% set _storage = (vm.storage_dir if vm.storage_dir | default('') | length > 0 else vm_images_dir) ~ '/' ~ vm.name %}
 {% set _last_octet = vm.ip.split('.')[-1] | int if vm.ip is defined and vm.ip | length > 0 else 80 %}
-{% set _ssh_port = 2200 + _last_octet %}
 {% set _vnc_port = 5900 + _last_octet %}
   <os>
     <type arch='x86_64' machine='q35'>hvm</type>
@@ -76,14 +75,20 @@
     </disk>
 {% endif %}
     <controller type='sata' index='0'/>
-    <controller type='usb' model='qemu-xhci' index='0'/>
+    <controller type='usb' model='qemu-xhci' index='0'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
+    </controller>
     <controller type='pci' model='pcie-root'/>
     <controller type='pci' model='pcie-root-port'/>
     <controller type='pci' model='pcie-root-port'/>
     <controller type='pci' model='pcie-root-port'/>
     <controller type='pci' model='pcie-root-port'/>
-    {# user-net + hostfwd entirely via qemu:commandline below; no libvirt
-       <interface> element, matching the validated hand-written XML #}
+    <interface type='bridge'>
+      <mac address='{{ vm.mac }}'/>
+      <source bridge='{{ vm.bridge }}'/>
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+    </interface>
     <input type='tablet' bus='usb'/>
     <input type='keyboard' bus='usb'/>
     <graphics type='vnc' port='{{ _vnc_port }}' listen='{{ vm.graphics_listen | default('127.0.0.1') }}'>
@@ -106,9 +111,5 @@
     <qemu:arg value='type=2'/>
     <qemu:arg value='-device'/>
     <qemu:arg value='vmware-svga,addr=0x1e'/>
-    <qemu:arg value='-netdev'/>
-    <qemu:arg value='user,id=net0,hostfwd=tcp::{{ _ssh_port }}-:22'/>
-    <qemu:arg value='-device'/>
-    <qemu:arg value='virtio-net-pci,netdev=net0,mac={{ vm.mac }},addr=0x05'/>
   </qemu:commandline>
 </domain>
