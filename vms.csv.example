@@ -20,7 +20,7 @@
 #   ip          - Static IP address (empty = DHCP). Linux applies it via cloud-init
 #                 at first boot. macOS uses DHCP by default; leave empty unless
 #                 you want a static IP, in which case set it here and run
-#                 playbooks/configure-macos.yaml once after the VM boots.
+#                 playbooks/configure-macos-network.yaml once after the VM boots.
 #   netmask     - Subnet CIDR (default: 22, e.g. 24 for 255.255.255.0)
 #   gateway     - Default gateway
 #   dns         - DNS servers (comma-separated, e.g. "8.8.8.8,8.8.4.4")

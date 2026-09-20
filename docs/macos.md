@@ -92,7 +92,7 @@ To switch a macOS VM from DHCP to a custom static IP, do it in two steps:
 
 1. **Define the network in `vms.csv` first** — fill the `ip`, `netmask`
    (CIDR prefix, e.g. `22`), `gateway` and `dns` columns (all four are
-   required; `configure-macos.yaml` asserts this before touching the guest):
+   required; `configure-macos-network.yaml` asserts this before touching the guest):
 
    ```csv
    ...,efi,false,/home/fish/bucket/kvm/macos,192.168.100.45,24,192.168.100.1,192.168.100.53,
@@ -101,7 +101,7 @@ To switch a macOS VM from DHCP to a custom static IP, do it in two steps:
 2. **Run the playbook against the current (DHCP) address**:
 
    ```bash
-   ap playbooks/configure-macos.yaml -e vm_name=macos-sonoma-01 -e boot_ip=192.168.100.45
+   ap playbooks/configure-macos-network.yaml -e vm_name=macos-sonoma-01 -e boot_ip=192.168.100.45
    ```
 
    `boot_ip` is the DHCP address the VM answers on right now (find it with

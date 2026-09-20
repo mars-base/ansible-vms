@@ -18,7 +18,7 @@ VMs are defined in `vms.csv` file. Each row represents a VM with the following f
 | `firmware` | `efi` or empty (BIOS) | `efi` |
 | `autostart` | Auto-start on boot (default: `false`) | `true` |
 | `storage_dir` | VM storage path (optional, default: `/var/lib/libvirt/images`) | `/data/vms` |
-| `ip` | Static IP address (optional, empty = DHCP). Linux: applied via cloud-init at create; macOS: applied later via `configure-macos.yaml`, see [macOS VMs](macos.md) | `192.168.1.100` |
+| `ip` | Static IP address (optional, empty = DHCP). Linux: applied via cloud-init at create; macOS: applied later via `configure-macos-network.yaml`, see [macOS VMs](macos.md) | `192.168.1.100` |
 | `netmask` | Subnet CIDR (optional, default: `22`) | `24` |
 | `gateway` | Default gateway (required if `ip` is set) | `192.168.1.1` |
 | `dns` | DNS servers, comma-separated (required if `ip` is set) | `8.8.8.8,8.8.4.4` |
@@ -36,5 +36,5 @@ debian12-dev,local,linux,2048,2,debian12,20,0,/home/user/images/debian-12.qcow2,
 - **MAC addresses**: Each VM needs a unique MAC address for stable DHCP leases
 - **Autostart**: Only debian12-01 is configured with `autostart=true` (starts on host boot)
 - **Storage**: VMs can use custom storage paths or default `/var/lib/libvirt/images`
-- **Static IP**: Linux VMs via cloud-init; macOS VMs via `configure-macos.yaml` over SSH (no cloud-init on macOS) — see [macOS VMs](macos.md)
+- **Static IP**: Linux VMs via cloud-init; macOS VMs via `configure-macos-network.yaml` over SSH (no cloud-init on macOS) — see [macOS VMs](macos.md)
 - **Idempotent**: The `create-vm` playbook checks if VM exists before creating, safe to run multiple times

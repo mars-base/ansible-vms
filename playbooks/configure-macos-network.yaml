@@ -1,15 +1,19 @@
 ---
 
-# One-time bootstrap for macOS VMs: set static IP + DNS over the temporary
-# DHCP address the fresh overlay gets on first boot. The macOS base image has
-# no cloud-init, so network setup happens after the fact, over SSH.
+# One-time bootstrap for macOS VMs: switch the network from DHCP to the
+# static IP defined in vms.csv (ip/netmask/gateway/dns). The macOS base image
+# has no cloud-init, so this runs over SSH against the current (DHCP) address.
 #
 # Usage:
-#   ap playbooks/configure-macos.yaml -e vm_name=macos-sonoma-01 -e boot_ip=10.241.20.123
+#   1. Fill ip/netmask/gateway/dns for the VM's row in vms.csv
+#   2. Find the VM's current address:  ap playbooks/list-vms.yaml
+#   3. ap playbooks/configure-macos-network.yaml -e vm_name=macos-01 -e boot_ip=10.241.23.45
 #
-#   boot_ip = the DHCP-assigned address to connect to (find it with:
-#   `arp -an | grep <mac>` or the host's lease db). After this run the VM
-#   answers on the static `ip` column from vms.csv.
+#   boot_ip = the address the VM answers on right now (usually DHCP).
+#   After this run the VM uses the static ip from vms.csv.
+#
+# To revert to DHCP later:
+#   ssh admin@<ip> 'echo <password> | sudo -S networksetup -setdhcp Ethernet'
 
 - name: Configure macOS VM network
   gather_facts: false
@@ -24,24 +28,24 @@
     boot_ip: ""
 
   tasks:
-    - name: Check inputs
+    - name: "Check required arguments (vm_name, boot_ip)"
       assert:
         that:
           - vm_name | length > 0
           - boot_ip | length > 0
         fail_msg: "Required: -e vm_name=<name> -e boot_ip=<DHCP address>. See docs/macos.md."
 
-    - name: Read vms.csv
+    - name: "Read VM inventory (vms.csv)"
       read_csv:
         path: "{{ vm_csv_file | default(inventory_dir + '/vms.csv') }}"
       register: _vms_csv
       delegate_to: localhost
 
-    - name: Select VM row
+    - name: "Look up this VM in vms.csv"
       set_fact:
         vm: "{{ _vms_csv.list | selectattr('name', 'equalto', vm_name) | list }}"
 
-    - name: Check VM row exists and is macOS
+    - name: "Validate: macOS VM with full static network config in vms.csv"
       assert:
         that:
           - vm | length == 1
@@ -52,22 +56,23 @@
           - vm[0].dns | default('') | length > 0
         fail_msg: "'{{ vm_name }}' not found in vms.csv, or not a macos VM with ip/netmask/gateway/dns all set."
 
-    - name: Compute dotted netmask from CIDR prefix
+    - name: "Convert CIDR prefix to dotted netmask"
       vars:
         pfx: "{{ vm[0].netmask | default(24) | int }}"
       set_fact:
         _netmask_dotted: >-
-          {% set n = (2 ** pfx - 1) * 2 ** (32 - pfx) %}
+          {% set p = pfx | int %}
+          {% set n = (2 ** p - 1) * 2 ** (32 - p) %}
           {{ (n // 2**24) }}.{{ (n // 2**16) % 256 }}.{{ (n // 2**8) % 256 }}.{{ n % 256 }}
 
-    - name: Wait for SSH on the boot IP
+    - name: "Wait for SSH on the current (DHCP) address"
       wait_for:
         host: "{{ boot_ip }}"
         port: 22
         timeout: 120
 
     # raw, not shell: the macOS guest has no Python interpreter for modules
-    - name: Find BSD interface with the configured MAC
+    - name: "On the VM: find network card (enX) matching the MAC from vms.csv"
       vars:
         ansible_connection: ssh
         ansible_host: "{{ boot_ip }}"
@@ -84,12 +89,14 @@
       register: _iface
       changed_when: false
 
-    - name: Check interface found
+    - name: "Validate: network card found"
       assert:
         that: _iface.stdout | trim | length > 0
         fail_msg: "No interface with MAC {{ vm[0].mac }} found on {{ boot_ip }}."
 
-    - name: Set static IP + DNS
+    # networksetup's own vocabulary is the network *service* name (e.g.
+    # "Ethernet"), not the BSD device (en0) - the two are not interchangeable
+    - name: "On the VM: translate card device (enX) to networksetup service name"
       vars:
         ansible_connection: ssh
         ansible_host: "{{ boot_ip }}"
@@ -99,15 +106,34 @@
         ansible_become_method: sudo
         ansible_become_pass: admin
         ansible_become_flags: "-S"
-      raw: "networksetup -setmanual {{ _iface.stdout | trim }} {{ vm[0].ip }} {{ _netmask_dotted }} {{ vm[0].gateway }} && networksetup -setdnsservers {{ _iface.stdout | trim }} {{ vm[0].dns | replace(',', ' ') }}"
+      raw: "networksetup -listnetworkserviceorder | grep -B1 'Device: {{ _iface.stdout | trim }})' | grep -v 'Hardware Port' | sed 's/^([0-9]*) //'"
+      register: _service
+      changed_when: false
 
-    - name: Verify the static IP answers
+    - name: "Validate: service name found"
+      assert:
+        that: _service.stdout | trim | length > 0
+        fail_msg: "No network service maps to interface {{ _iface.stdout | trim }} on {{ boot_ip }}."
+
+    - name: "On the VM: apply static IP, mask, gateway and DNS"
+      vars:
+        ansible_connection: ssh
+        ansible_host: "{{ boot_ip }}"
+        ansible_user: admin
+        ansible_ssh_pass: admin
+        ansible_become: true
+        ansible_become_method: sudo
+        ansible_become_pass: admin
+        ansible_become_flags: "-S"
+      raw: "networksetup -setmanual '{{ _service.stdout | trim }}' {{ vm[0].ip }} {{ _netmask_dotted }} {{ vm[0].gateway }} && networksetup -setdnsservers '{{ _service.stdout | trim }}' {{ vm[0].dns | replace(',', ' ') }}"
+
+    - name: "Wait for SSH on the new static IP"
       wait_for:
         host: "{{ vm[0].ip }}"
         port: 22
         timeout: 60
 
-    - name: Done
+    - name: "Show result and next step (hosts.ini)"
       debug:
         msg: >-
           {{ vm_name }} is now on {{ vm[0].ip }}.
