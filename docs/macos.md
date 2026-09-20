@@ -24,6 +24,24 @@ macOS guests alongside Linux/Windows VMs. Base image 制作详见 [macos-base-im
 | `OpenCore.qcow2` | OpenCore 引导盘（SIP 已关，自动引导） |
 | `OVMF_VARS-blessed.fd` | 预 bless 的 NVRAM 模板（冷启动免键盘的关键） |
 
+### 拷贝到其他主机
+
+这三个文件是自包含的，直接拷贝到新主机的 `macos_asset_dir`（默认
+`/home/fish/bucket/kvm/macos/`）即可创建 macOS VM。bless 写入的 Preboot 卷
+UUID、APFS 文件系统、boot.efi 路径都跟文件走，不依赖源主机状态。
+
+新主机还需满足：
+
+1. **`apt install ovmf`**——模板另引用宿主机系统文件 `/usr/share/OVMF/OVMF_CODE_4M.fd`
+   （持久化版本）。必须是发行版的 ovmf 包，**不能**用 OSX-KVM 自带的非持久化版本，
+   否则 bless 失效、冷启动弹磁盘选择界面（见"模板约束"第 1 条）
+2. **拓扑一致**——q35 + 内置 SATA `1f:2` + 系统盘 sdb（port 2）由 `domain-macos.xml.j2`
+   写死，走同一套 ansible-vms 模板即自动满足
+3. QEMU >= 8.2.2、libvirt 版本相近（`qemu:commandline` 语法兼容）
+
+不需要拷贝：`BaseSystem.img`、`fetch-macOS-v2.py`、`boot-macos-install.sh`——
+只有重新制作 base image 时才用。
+
 ## 配置（vms.csv）
 
 在 `vms.csv` 添加一行，`type=macos`，`disk_gb` 必须等于 base image 虚拟大小（64）。
