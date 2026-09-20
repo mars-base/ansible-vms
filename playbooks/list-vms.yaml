@@ -45,19 +45,31 @@
       loop_control:
         label: "{{ item.item.name }}"
 
+    - name: Get VM VNC display
+      shell: virsh vncdisplay {{ item.item.name }} 2>/dev/null || true
+      register: _vm_vnc
+      changed_when: false
+      failed_when: false
+      when: "'NOT_FOUND' not in item.stdout"
+      loop: "{{ _vm_status.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+
     - name: Show VM list
       debug:
         msg: |
-          {{ '%-12s' | format('Host') }} {{ '%-20s' | format('Name') }} {{ '%-15s' | format('IP') }} {{ '%-8s' | format('Type') }} {{ '%-10s' | format('CPU') }} {{ '%-10s' | format('Memory') }} {{ '%-12s' | format('OS') }} State
-          {{ '-' * 12 }} {{ '-' * 20 }} {{ '-' * 15 }} {{ '-' * 8 }} {{ '-' * 10 }} {{ '-' * 10 }} {{ '-' * 12 }} {{ '-' * 10 }}
+          {{ '%-12s' | format('Host') }} {{ '%-20s' | format('Name') }} {{ '%-15s' | format('IP') }} {{ '%-8s' | format('Type') }} {{ '%-10s' | format('CPU') }} {{ '%-10s' | format('Memory') }} {{ '%-12s' | format('OS') }} {{ '%-18s' | format('VNC') }} State
+          {{ '-' * 12 }} {{ '-' * 20 }} {{ '-' * 15 }} {{ '-' * 8 }} {{ '-' * 10 }} {{ '-' * 10 }} {{ '-' * 12 }} {{ '-' * 18 }} {{ '-' * 10 }}
           {% for vm in _vms %}
           {% set idx = loop.index0 %}
           {% set status = _vm_status.results[idx] %}
           {% set ip = _vm_ip.results[idx].stdout | default('-') if _vm_ip.results[idx] is not skipped else '-' %}
+          {% set vnc_raw = _vm_vnc.results[idx].stdout | default('') if _vm_vnc.results[idx] is not skipped else '' %}
+          {% set vnc = ('127.0.0.1:' ~ (vnc_raw.split(':')[-1] | int + 5900)) if vnc_raw | length > 0 else '-' %}
           {% if 'NOT_FOUND' not in status.stdout %}
           {% set state = status.stdout_lines | select('match', 'State') | list | first | default('') | regex_replace('State:\s*', '') %}
-          {{ '%-12s' | format(vm.host) }} {{ '%-20s' | format(vm.name) }} {{ '%-15s' | format(ip) }} {{ '%-8s' | format(vm.type) }} {{ '%-10s' | format(vm.vcpus + ' vCPU') }} {{ '%-10s' | format(vm.memory_mb + ' MB') }} {{ '%-12s' | format(vm.os) }} {{ state }}
+          {{ '%-12s' | format(vm.host) }} {{ '%-20s' | format(vm.name) }} {{ '%-15s' | format(ip) }} {{ '%-8s' | format(vm.type) }} {{ '%-10s' | format(vm.vcpus + ' vCPU') }} {{ '%-10s' | format(vm.memory_mb + ' MB') }} {{ '%-12s' | format(vm.os) }} {{ '%-18s' | format(vnc) }} {{ state }}
           {% else %}
-          {{ '%-12s' | format(vm.host) }} {{ '%-20s' | format(vm.name) }} {{ '%-15s' | format('-') }} {{ '%-8s' | format('-') }} {{ '%-10s' | format('-') }} {{ '%-10s' | format('-') }} {{ '%-12s' | format('-') }} NOT DEFINED
+          {{ '%-12s' | format(vm.host) }} {{ '%-20s' | format(vm.name) }} {{ '%-15s' | format('-') }} {{ '%-8s' | format('-') }} {{ '%-10s' | format('-') }} {{ '%-10s' | format('-') }} {{ '%-12s' | format('-') }} {{ '%-18s' | format('-') }} NOT DEFINED
           {% endif %}
           {% endfor %}
