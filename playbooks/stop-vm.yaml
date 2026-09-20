@@ -38,4 +38,12 @@
 
     - name: Stop VM (graceful shutdown)
       shell: virsh shutdown {{ _vms[0].name }}
-      when: _vm_state.stdout == 'running'
+      when: _vm_state.stdout == 'running' and _vms[0].type | default('linux') != 'macos'
+
+    - name: macOS shutdown notice
+      debug:
+        msg: >-
+          VM '{{ _vms[0].name }}' is macOS — it does NOT respond to ACPI shutdown.
+          Please shut down from the macOS desktop (Apple menu → Shut Down),
+          or via SSH:  ssh admin@<ip> 'sudo shutdown -h now'
+      when: _vm_state.stdout == 'running' and _vms[0].type | default('linux') == 'macos'

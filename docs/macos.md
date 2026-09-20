@@ -71,15 +71,8 @@ The EFI **code** is the host's own `/usr/share/OVMF/OVMF_CODE_4M.fd` (see
    networksetup -setdnsservers "Ethernet" 10.246.80.210 10.246.180.210
    ```
 
-   ```bash
-   networksetup -setmanual "Ethernet" 10.241.20.80 255.255.252.0 10.241.20.1
-   networksetup -setdnsservers "Ethernet" 10.246.80.210 10.246.180.210
-   ```
-
-   This static config is written into the overlay and persists across reboots,
-   so a freshly-defined VM that reuses this base overlay boots already online.
-   From here `ssh admin@10.241.20.80` and `ansible <name> -m ping` (via `raw`;
-   the macOS guest has no Python interpreter for the fact-gathering modules).
+   From here `ssh admin@<dhcp-ip>` works. For ansible, use `-m raw` (the
+   macOS guest has no Python interpreter for the fact-gathering modules).
 
 ## Template constraints
 
