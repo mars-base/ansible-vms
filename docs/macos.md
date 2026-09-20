@@ -62,10 +62,14 @@ The EFI **code** is the host's own `/usr/share/OVMF/OVMF_CODE_4M.fd` (see
 3. Cold boot needs **no input**. Within ~40s the VM reaches the macOS login
    window.
 
-4. **Set the static IP inside the guest** (br0 has no DHCP server, so the VM
-   is unreachable until this is done). Connect VNC
-   (`127.0.0.1:5900+<last_octet>`, e.g. `:80`), log in as `admin`/`admin`, and
-   either use System Settings → Network → Ethernet → Manual, or in Terminal:
+4. **Network is DHCP by default**. The VM will get an address from the upstream
+   DHCP server on `br0`. Find it with `sudo virsh domifaddr <name>` or check
+   your router's DHCP lease table. If you need a static IP, SSH in and run:
+
+   ```bash
+   networksetup -setmanual "Ethernet" 10.241.20.80 255.255.252.0 10.241.20.1
+   networksetup -setdnsservers "Ethernet" 10.246.80.210 10.246.180.210
+   ```
 
    ```bash
    networksetup -setmanual "Ethernet" 10.241.20.80 255.255.252.0 10.241.20.1
