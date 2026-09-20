@@ -1,108 +1,125 @@
 # macOS VMs (Hackintosh)
 
-macOS guests alongside Linux/Windows VMs. Base image 制作详见 [macos-base-image.md](macos-base-image.md)。
+macOS guests run alongside Linux/Windows VMs. See
+[macos-base-image.md](macos-base-image.md) (Chinese) for how the base image
+was built from scratch with [kholia/OSX-KVM](https://github.com/kholia/OSX-KVM).
 
-## 与 Linux/Windows 的差异
+## How macOS differs from Linux/Windows
 
-| 方面 | Linux/Windows | macOS |
-|------|---------------|-------|
-| 显卡 | qxl/virtio/spice | `vmware-svga` via `qemu:commandline` |
+| Aspect | Linux/Windows | macOS |
+|--------|---------------|-------|
+| Video | qxl/virtio/spice | `vmware-svga` via `qemu:commandline` |
 | SMC | — | `isa-applesmc,osk=...` via `qemu:commandline` |
-| 引导 | 系统盘直接启动 | OpenCore overlay (order 1) → macOS 盘 (order 2) |
-| 固件 | distro OVMF 或 SeaBIOS | 持久化 OVMF + 预 bless 的 NVRAM 模板 |
-| 网络 | libvirt `<interface>` | bridge，virtio NIC pin 到 root-bus `slot=0x05` |
-| IP 配置 | cloud-init | 无 cloud-init，DHCP 或 SSH 手动设 |
-| 关机 | `virsh shutdown` (ACPI) | macOS 不响应 ACPI shutdown，需桌面关机或 SSH |
+| Boot | system disk directly | OpenCore overlay (order 1) → macOS disk (order 2) |
+| Firmware | distro OVMF or SeaBIOS | persistent OVMF + a **pre-blessed** NVRAM template |
+| Network | libvirt `<interface>` | bridge, virtio NIC pinned to root-bus `slot=0x05` |
+| IP config | cloud-init | no cloud-init — DHCP by default |
+| Shutdown | `virsh shutdown` (ACPI) | macOS ignores ACPI — shut down from the desktop or via SSH |
 
-## 资产
+## Assets
 
-共享只读模板位于 `macos_asset_dir`（默认 `/home/fish/bucket/kvm/macos/`）：
+Shared read-only templates live in `macos_asset_dir` (default
+`/home/fish/bucket/kvm/macos/`):
 
-| 文件 | 说明 |
-|------|------|
-| `macos-sonoma-base.img` | Sonoma 14.8.9 base image，admin/admin，Remote Login 已开 |
-| `OpenCore.qcow2` | OpenCore 引导盘（SIP 已关，自动引导） |
-| `OVMF_VARS-blessed.fd` | 预 bless 的 NVRAM 模板（冷启动免键盘的关键） |
+| File | Purpose |
+|------|---------|
+| `macos-sonoma-base.img` | Sonoma 14.8.9 base image, admin/admin, Remote Login enabled |
+| `OpenCore.qcow2` | OpenCore boot disk (SIP disabled, auto-boot) |
+| `OVMF_VARS-blessed.fd` | Pre-blessed NVRAM template — what makes keyboard-free cold boot possible |
 
-### 拷贝到其他主机
+### Copying assets to another host
 
-这三个文件是自包含的，直接拷贝到新主机的 `macos_asset_dir`（默认
-`/home/fish/bucket/kvm/macos/`）即可创建 macOS VM。bless 写入的 Preboot 卷
-UUID、APFS 文件系统、boot.efi 路径都跟文件走，不依赖源主机状态。
+The three files are self-contained — copy them into the new host's
+`macos_asset_dir` and macOS VMs can be created there. The blessed Preboot
+volume UUID, APFS layout and boot.efi path all travel with the files.
 
-新主机还需满足：
+The new host additionally needs:
 
-1. **`apt install ovmf`**——模板另引用宿主机系统文件 `/usr/share/OVMF/OVMF_CODE_4M.fd`
-   （持久化版本）。必须是发行版的 ovmf 包，**不能**用 OSX-KVM 自带的非持久化版本，
-   否则 bless 失效、冷启动弹磁盘选择界面（见"模板约束"第 1 条）
-2. **拓扑一致**——q35 + 内置 SATA `1f:2` + 系统盘 sdb（port 2）由 `domain-macos.xml.j2`
-   写死，走同一套 ansible-vms 模板即自动满足
-3. QEMU >= 8.2.2、libvirt 版本相近（`qemu:commandline` 语法兼容）
+1. **`apt install ovmf`** — the template also references the host's
+   `/usr/share/OVMF/OVMF_CODE_4M.fd` (the persistent distro build). Do **not**
+   use OSX-KVM's bundled non-persistent copy, or the bless is invisible and
+   cold boot stops at Apple's disk picker (see Constraint 1 below)
+2. **Matching topology** — q35 + built-in SATA at `1f:2` + system disk on
+   port 2 are hardcoded in `domain-macos.xml.j2`, so using the same
+   ansible-vms role satisfies this automatically
+3. QEMU >= 8.2.2 and a similar libvirt version (for `qemu:commandline`)
 
-不需要拷贝：`BaseSystem.img`、`fetch-macOS-v2.py`、`boot-macos-install.sh`——
-只有重新制作 base image 时才用。
+No need to copy: `BaseSystem.img`, `fetch-macOS-v2.py`,
+`boot-macos-install.sh` — only used when re-creating the base image.
 
-## 配置（vms.csv）
+## Configure (vms.csv)
 
-在 `vms.csv` 添加一行，`type=macos`，`disk_gb` 必须等于 base image 虚拟大小（64）。
-macOS 使用 DHCP，**不填 ip/netmask/gateway/dns**。VNC 端口从 MAC 地址末字节推导（`5900 + hex末字节`）。
+Add a row with `type=macos`. `disk_gb` **must** equal the base image's virtual
+size (64). macOS uses DHCP, so **leave ip/netmask/gateway/dns empty** (set
+them only if you want a static IP via `configure-macos.yaml`). The VNC port is
+derived from the MAC's last hex byte (`5900 + hex`).
 
 ```csv
 macos-sonoma-01,local,macos,8192,4,macos-sonoma,64,0,/home/fish/bucket/kvm/macos/macos-sonoma-base.img,br0,52:54:00:ff:00:01,efi,false,/home/fish/bucket/kvm/macos,,,,,
 ```
 
-## 创建
+## Create
 
 ```bash
 ap playbooks/create-vm.yaml -e vm_name=macos-sonoma-01
 ```
 
-创建两个 overlay（系统盘 + OpenCore），复制 blessed NVRAM，define 并 start。
-冷启动免键盘，约 40s 到登录界面。
+Builds the two overlays (system disk + OpenCore), seeds the per-VM NVRAM from
+the blessed template, and defines/starts the domain. Cold boot needs zero
+keyboard input; the login window appears in ~40s.
 
-**网络**：默认 DHCP（br0 上游路由器）。查看 IP 用 list-vms 剧本：
+**Network**: DHCP by default (upstream router on `br0`). Look up the IP with:
 
 ```bash
 ap playbooks/list-vms.yaml
 ```
 
-输出的 IP 列即各 VM 地址（macOS 例：`192.168.100.45`）。
+The IP column lists every VM's address (e.g. `192.168.100.45` for macOS),
+and the VNC column shows `127.0.0.1:<port>`.
 
-> ansible 只能用 `-m raw`（macOS 无 Python 解释器）。
+> Ansible against macOS guests must use `-m raw` — the guest has no Python
+> interpreter.
 
-## 开机
+## Start
 
 ```bash
 ap playbooks/start-vm.yaml -e vm_name=macos-sonoma-01
 ```
 
-## 停机
+## Stop
 
 ```bash
 ap playbooks/stop-vm.yaml -e vm_name=macos-sonoma-01
 ```
 
-macOS 不响应 ACPI shutdown，剧本会提示：
+macOS ignores ACPI shutdown, so the playbook only prints a notice:
 
-- 桌面关机：Apple menu → Shut Down
-- 或 SSH：`ssh admin@<ip> 'sudo shutdown -h now'`
+- from the desktop: Apple menu → Shut Down
+- or via SSH: `ssh admin@<ip> 'sudo shutdown -h now'`
 
-> `virsh shutdown` 对 macOS 是 no-op，不要使用。
+> `virsh shutdown` is a no-op on macOS guests — do not use it.
 
-## 销毁
+## Destroy
 
 ```bash
 ap playbooks/destroy-vm.yaml -e vm_name=macos-sonoma-01 -e confirm=true
 ```
 
-销毁前需先停机。base image 和共享资产不受影响。
+Stop the VM first (see above). The shared base image and assets are never
+touched.
 
-## 模板约束（domain-macos.xml.j2）
+## Template constraints (domain-macos.xml.j2)
 
-三项必须匹配，否则表现为不同的无关故障：
+Three details must match the validated hand-built config; each violation
+looks like a different, unrelated bug:
 
-1. **持久化 OVMF**：用宿主机 `/usr/share/OVMF/OVMF_CODE_4M.fd`，不是 OSX-KVM 自带的非持久化版本
-2. **Bless 拓扑匹配**：磁盘必须挂 q35 内置 AHCI（PCI `1f:2`），不加额外 `ich9-ahci`
-3. **NIC pin 到 root-bus `slot=0x05`**：macOS virtio-net 只识别固定 root-bus 位置，libvirt 自动分配到 `pcie-root-port` 子设备会导致网卡消失
+1. **Persistent OVMF**: the host's `/usr/share/OVMF/OVMF_CODE_4M.fd`, not
+   OSX-KVM's non-persistent bundled build
+2. **Bless topology match**: disks sit on q35's built-in AHCI (PCI `1f:2`);
+   never add a second `ich9-ahci` device
+3. **NIC pinned to root-bus `slot=0x05`**: macOS's virtio-net driver only
+   binds at a fixed root-bus position — if libvirt auto-places the NIC on a
+   `pcie-root-port` child, the guest never sees it
 
-详细原理和 bless 流程见 [macos-base-image.md](macos-base-image.md)。
+Full rationale and the bless procedure:
+[macos-base-image.md](macos-base-image.md).
