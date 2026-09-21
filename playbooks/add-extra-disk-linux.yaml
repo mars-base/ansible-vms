@@ -1,0 +1,176 @@
+---
+
+# Add extra data disks to Linux VMs - independent of the vms.csv data_disk_gb
+# column (which stays reserved for the one disk create-vm.yaml builds).
+#
+# Disks are named <vm>-extra<N>.qcow2, numbered from 1. The next free index
+# AND the next free vdX letter are both auto-detected (live + persistent
+# targets are considered), so repeated runs never collide. virtio-blk
+# hotplug works on running Linux guests: a running VM gets the disk
+# immediately (--config --live, no reboot); a shut-off VM gets it via
+# --config only, visible on next boot.
+#
+# In the guest, find the device by serial (the vdX name is assigned by the
+# kernel and may differ from the host target):  lsblk -o NAME,SERIAL
+#
+# Usage:
+#   # add one 10G disk (next free index/letter picked automatically)
+#   ap playbooks/add-extra-disk-linux.yaml -e vm_name=debian13-01 -e extra_size=10G
+#
+#   # add three 20G disks in one run
+#   ap playbooks/add-extra-disk-linux.yaml -e vm_name=debian13-01 -e count=3 -e extra_size=20G
+#
+#   # override the target directory (default: the VM's storage dir from vms.csv)
+#   ap playbooks/add-extra-disk-linux.yaml -e vm_name=debian13-01 -e extra_dir=/data/disks
+#
+# List / delete:
+#   ap playbooks/list-extra-disks.yaml -e vm_name=debian13-01
+#   ap playbooks/delete-extra-disk.yaml -e vm_name=debian13-01 -e extra_index=2 -e confirm=true
+
+- name: Add extra data disk(s) to Linux VMs
+  gather_facts: false
+  hosts: "{{ HOSTS | default('kvm_hosts') }}"
+  become: true
+  become_user: root
+  become_method: sudo
+  vars:
+    count: 1            # how many disks to add this run
+    extra_size: 10G     # size per disk (qemu-img syntax)
+
+  tasks:
+    - name: Check vm_name is specified
+      assert:
+        that: vm_name is defined and vm_name != ''
+        fail_msg: "vm_name is required. Usage: -e vm_name=<name> -e extra_size=10G"
+
+    - name: Read vms.csv
+      read_csv:
+        path: "{{ vm_csv_file | default(inventory_dir + '/vms.csv') }}"
+      register: _vms_csv
+      delegate_to: localhost
+
+    - name: Select VM row
+      set_fact:
+        vm: "{{ (_vms_csv.list | selectattr('host', 'equalto', inventory_hostname)
+                 | selectattr('name', 'equalto', vm_name) | list) + [{'name': '__not_found__'}] }}"
+
+    - name: Check VM found and is Linux
+      assert:
+        that:
+          - vm[0].name != '__not_found__'
+          - vm[0].type | default('linux') == 'linux'
+        fail_msg: "VM '{{ vm_name }}' not found in vms.csv for host '{{ inventory_hostname }}', or is not a linux VM (extra disks here are for Linux guests only)."
+
+    - name: Check VM exists in libvirt
+      shell: virsh domstate {{ vm_name }} 2>/dev/null
+      register: _dom
+      failed_when: false
+      changed_when: false
+
+    - name: Assert VM exists in libvirt
+      assert:
+        that: _dom.rc == 0
+        fail_msg: "VM '{{ vm_name }}' is not defined in libvirt. Create it first with create-vm.yaml."
+
+    - name: Check target directory exists
+      file:
+        path: "{{ extra_dir }}"
+        state: directory
+        mode: "0755"
+      when: extra_dir is defined and extra_dir | length > 0
+
+    - name: Set disk directory
+      set_fact:
+        _dir: "{{ (extra_dir | default('') if extra_dir | default('') | length > 0
+                   else ((vm[0].storage_dir if vm[0].storage_dir | default('') | length > 0
+                         else vm_images_dir | default('/var/lib/libvirt/images')) ~ '/' ~ vm_name)) }}"
+
+    - name: List existing extra disks
+      find:
+        paths: "{{ _dir }}"
+        patterns: "{{ vm_name }}-extra[0-9]*.qcow2"
+      register: _found
+
+    - name: Collect existing indexes
+      set_fact:
+        _have: "{{ (_have | default([])) + [item.path | basename | regex_replace('^' ~ vm_name ~ '-extra([0-9]+)\\.qcow2$', '\\1') | int] }}"
+      loop: "{{ _found.files | default([]) }}"
+
+    - name: Compute next free index
+      set_fact:
+        _next: >-
+          {% set used = _have | default([]) | map('int') | list %}
+          {% set m = (used | max) if used else 0 %}
+          {{ range(1, m + 2) | list | reject('in', used) | first | default(m + 1) | int }}
+
+    - name: Add extra disks
+      block:
+        - name: Validate extra_size
+          assert:
+            that: extra_size | regex_search('^[0-9]+[KMGT]?$')
+            fail_msg: "extra_size must look like 10G / 500M / 2T (got '{{ extra_size }}')."
+
+        - name: Check VM state
+          shell: virsh domstate {{ vm_name }}
+          register: _state
+          changed_when: false
+
+        - name: Set running flag
+          set_fact:
+            _running: "{{ _state.stdout | trim == 'running' }}"
+
+        - name: List live block devices
+          shell: "virsh domblklist {{ vm_name }} 2>/dev/null | awk '{print $1}' | grep -E '^vd[a-z]$' || true"
+          register: _blks_live
+          changed_when: false
+
+        - name: List persistent block devices (config targets survive a shut-off)
+          shell: "virsh dumpxml --inactive {{ vm_name }} | grep -oE \"target dev='vd[a-z]'\" | grep -oE 'vd[a-z]' || true"
+          register: _blks_cfg
+          changed_when: false
+
+        - name: Compute free vdX letters
+          set_fact:
+            _letters: "{{ ('abcdefghijklmnopqrstuvwxyz' | list | difference((( _blks_live.stdout_lines + _blks_cfg.stdout_lines) | map('trim') | select('match', '^vd[a-z]$') | map('regex_replace', '^vd', '') | list)))[:count | int] }}"
+
+        - name: Create qcow2 image(s)
+          shell: "qemu-img create -f qcow2 {{ _dir }}/{{ vm_name }}-extra{{ _next | int + item.0 }}.qcow2 {{ extra_size }}"
+          loop: "{{ range(0, count | int) | list | zip(_letters) | list }}"
+
+        - name: Define XML for disk(s)
+          copy:
+            content: |
+              <disk type='file' device='disk'>
+                <driver name='qemu' type='qcow2' cache='none' io='native'/>
+                <source file='{{ _dir }}/{{ vm_name }}-extra{{ _next | int + item.0 }}.qcow2'/>
+                <target dev='vd{{ item.1 }}' bus='virtio'/>
+                <serial>{{ vm_name }}-extra{{ _next | int + item.0 }}</serial>
+              </disk>
+            dest: "/tmp/{{ vm_name }}-extra{{ _next | int + item.0 }}.xml"
+            mode: "0600"
+          loop: "{{ range(0, count | int) | list | zip(_letters) | list }}"
+
+        - name: Attach disk(s) - live hotplug (running VM)
+          shell: "virsh attach-device {{ vm_name }} /tmp/{{ vm_name }}-extra{{ _next | int + item.0 }}.xml --config --live"
+          loop: "{{ range(0, count | int) | list | zip(_letters) | list }}"
+          when: _running
+
+        - name: Attach disk(s) - config only (shut-off VM, visible next boot)
+          shell: "virsh attach-device {{ vm_name }} /tmp/{{ vm_name }}-extra{{ _next | int + item.0 }}.xml --config"
+          loop: "{{ range(0, count | int) | list | zip(_letters) | list }}"
+          when: not _running
+
+        - name: Remove temp XML
+          file:
+            path: "/tmp/{{ vm_name }}-extra{{ _next | int + item.0 }}.xml"
+            state: absent
+          loop: "{{ range(0, count | int) | list | zip(_letters) | list }}"
+
+        - name: Show result
+          debug:
+            msg: >-
+              Added {{ count }} disk(s) {{ extra_size }}:
+              {% for i in range(0, count | int) %}
+              {{ vm_name }}-extra{{ _next | int + i }}.qcow2 -> /dev/vd{{ _letters[i] }}
+              ({% if _running %}live now - verify in guest: lsblk -o NAME,SERIAL{% else %}attached via --config - appears on next boot{% endif %}){{ ',' if not loop.last else '' }}
+              {% endfor %}

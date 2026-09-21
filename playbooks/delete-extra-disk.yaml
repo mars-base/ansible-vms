@@ -1,0 +1,106 @@
+---
+
+# Delete an extra data disk (<vm>-extra<N>.qcow2) from a Linux VM:
+# detach from domain + delete the qcow2 file. DATA DESTRUCTION - requires
+# confirm=true. The disk must be an extra disk created by
+# add-extra-disk-linux.yaml; the vms.csv data_disk_gb disk is not touched.
+#
+# Running VM  -> detached live and from config (virtio-blk hot-unplug).
+# Shut-off VM -> detached from config only.
+#
+# Usage:
+#   ap playbooks/delete-extra-disk.yaml -e vm_name=debian13-01 -e extra_index=2 -e confirm=true
+#   # find indexes with:
+#   ap playbooks/list-extra-disks.yaml -e vm_name=debian13-01
+
+- name: Delete an extra data disk from a Linux VM
+  gather_facts: false
+  hosts: "{{ HOSTS | default('kvm_hosts') }}"
+  become: true
+  become_user: root
+  become_method: sudo
+  vars:
+    extra_index: ""
+
+  tasks:
+    - name: Check inputs
+      assert:
+        that:
+          - vm_name is defined and vm_name != ''
+          - extra_index | string | length > 0
+        fail_msg: "Required: -e vm_name=<name> -e extra_index=<N>. Usage: -e vm_name=debian13-01 -e extra_index=2 -e confirm=true"
+
+    - name: Require confirmation (deletes disk data)
+      assert:
+        that: confirm | default(false) | bool
+        fail_msg: "Deleting a data disk destroys its contents. Add -e confirm=true to proceed."
+
+    - name: Read vms.csv
+      read_csv:
+        path: "{{ vm_csv_file | default(inventory_dir + '/vms.csv') }}"
+      register: _vms_csv
+      delegate_to: localhost
+
+    - name: Select VM row
+      set_fact:
+        vm: "{{ (_vms_csv.list | selectattr('host', 'equalto', inventory_hostname)
+                 | selectattr('name', 'equalto', vm_name) | list) + [{'name': '__not_found__'}] }}"
+
+    - name: Check VM found and is Linux
+      assert:
+        that:
+          - vm[0].name != '__not_found__'
+          - vm[0].type | default('linux') == 'linux'
+        fail_msg: "VM '{{ vm_name }}' not found in vms.csv for host '{{ inventory_hostname }}', or is not a linux VM."
+
+    - name: Check VM exists in libvirt
+      shell: virsh domstate {{ vm_name }} 2>/dev/null
+      register: _dom
+      failed_when: false
+      changed_when: false
+
+    - name: Assert VM exists in libvirt
+      assert:
+        that: _dom.rc == 0
+        fail_msg: "VM '{{ vm_name }}' is not defined in libvirt."
+
+    - name: Set disk directory
+      set_fact:
+        _dir: "{{ (extra_dir | default('') if extra_dir | default('') | length > 0
+                   else ((vm[0].storage_dir if vm[0].storage_dir | default('') | length > 0
+                         else vm_images_dir | default('/var/lib/libvirt/images')) ~ '/' ~ vm_name)) }}"
+        _disk: "{{ (extra_dir | default('') if extra_dir | default('') | length > 0
+                    else ((vm[0].storage_dir if vm[0].storage_dir | default('') | length > 0
+                          else vm_images_dir | default('/var/lib/libvirt/images')) ~ '/' ~ vm_name)) }}/{{ vm_name }}-extra{{ extra_index }}.qcow2"
+
+    - name: Check disk file exists
+      stat:
+        path: "{{ _disk }}"
+      register: _st
+
+    - name: Fail if disk not found
+      fail:
+        msg: "No extra disk {{ _disk }}. List them with list-extra-disks.yaml."
+      when: not _st.stat.exists
+
+    - name: Get VM state
+      shell: virsh domstate {{ vm_name }}
+      register: _state
+      changed_when: false
+
+    - name: Detach disk (live + config, running VM)
+      shell: "virsh detach-disk {{ vm_name }} '{{ _disk }}' --config --live"
+      when: _state.stdout | trim == 'running'
+
+    - name: Detach disk (config only, shut-off VM)
+      shell: "virsh detach-disk {{ vm_name }} '{{ _disk }}' --config"
+      when: _state.stdout | trim != 'running'
+
+    - name: Delete qcow2 file
+      file:
+        path: "{{ _disk }}"
+        state: absent
+
+    - name: Show result
+      debug:
+        msg: "Extra disk {{ vm_name }}-extra{{ extra_index }} detached and {{ _disk }} deleted ({{ (_st.stat.size / 1073741824) | round(1) }}G file)."

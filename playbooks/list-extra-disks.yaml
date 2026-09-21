@@ -1,0 +1,87 @@
+---
+
+# List extra data disks (<vm>-extra<N>.qcow2) of a Linux VM.
+# For each disk: index, size, whether it is attached in the live domain
+# and/or the persistent config, and the current host target (vdX).
+#
+# Usage:
+#   ap playbooks/list-extra-disks.yaml -e vm_name=debian13-01
+
+- name: List extra data disks of a Linux VM
+  gather_facts: false
+  hosts: "{{ HOSTS | default('kvm_hosts') }}"
+  become: true
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: Check vm_name is specified
+      assert:
+        that: vm_name is defined and vm_name != ''
+        fail_msg: "vm_name is required. Usage: -e vm_name=<name>"
+
+    - name: Read vms.csv
+      read_csv:
+        path: "{{ vm_csv_file | default(inventory_dir + '/vms.csv') }}"
+      register: _vms_csv
+      delegate_to: localhost
+
+    - name: Select VM row
+      set_fact:
+        vm: "{{ (_vms_csv.list | selectattr('host', 'equalto', inventory_hostname)
+                 | selectattr('name', 'equalto', vm_name) | list) + [{'name': '__not_found__'}] }}"
+
+    - name: Check VM found
+      assert:
+        that: vm[0].name != '__not_found__'
+        fail_msg: "VM '{{ vm_name }}' not found in vms.csv for host '{{ inventory_hostname }}'."
+
+    - name: Set disk directory
+      set_fact:
+        _dir: "{{ (extra_dir | default('') if extra_dir | default('') | length > 0
+                   else ((vm[0].storage_dir if vm[0].storage_dir | default('') | length > 0
+                         else vm_images_dir | default('/var/lib/libvirt/images')) ~ '/' ~ vm_name)) }}"
+
+    - name: Find extra disk files
+      find:
+        paths: "{{ _dir }}"
+        patterns: "{{ vm_name }}-extra[0-9]*.qcow2"
+      register: _found
+
+    - name: Get VM state
+      shell: virsh domstate {{ vm_name }}
+      register: _state
+      changed_when: false
+
+    - name: Inspect each disk
+      shell: |
+        path="{{ item.path }}"
+        live=$(virsh domblklist {{ vm_name }} 2>/dev/null | awk -v p="$path" '$2==p {print $1}')
+        cfg=$(virsh dumpxml --inactive {{ vm_name }} | grep -A3 "source file='$path'" | grep -oE "target dev='[a-z]+'" | cut -d"'" -f2 | head -1)
+        # -U: shared read, so an attached (locked) live disk can still be inspected
+        size=$(qemu-img info -U "$path" | sed -n 's/.*virtual size: [^(]*(\([0-9]*\) bytes).*/\1/p')
+        size=$(( size / 1073741824 ))
+        echo "$live|$cfg|$size"
+      args:
+        executable: /bin/bash
+      loop: "{{ _found.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      register: _info
+      changed_when: false
+
+    - name: Show extra disks
+      debug:
+        msg: |
+          VM '{{ vm_name }}' is {{ _state.stdout }} — extra disks in {{ _dir }}:
+          {% if _info.results | length == 0 %}
+          (none)
+          {% else %}
+          {% for r in _info.results %}
+          {% set idx = r.item.path | basename | regex_replace('^' ~ vm_name ~ '-extra([0-9]+)\\.qcow2$', '\\1') %}
+          {% set live = r.stdout.split('|')[0] | trim %}
+          {% set cfg = r.stdout.split('|')[1] | trim %}
+          {% set size = r.stdout.split('|')[2] | trim %}
+          extra{{ idx }}.qcow2: {{ size }}G, live={{ live or 'no' }}, config={{ cfg or 'no' }}
+          {% endfor %}
+          In the guest, match disks by serial: lsblk -o NAME,SERIAL (serial = {{ vm_name }}-extraN)
+          {% endif %}
