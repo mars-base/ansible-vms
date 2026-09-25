@@ -1,6 +1,6 @@
 # Data Disks
 
-> **macOS VMs**: the three playbooks below do **not** apply to macOS guests.
+> **macOS VMs**: the playbooks in this document do **not** apply to macOS guests.
 > macOS disks sit on q35's built-in SATA controller (not hotpluggable, and no
 > virtio-blk driver), and macOS guests have no Python for Ansible. The data
 > disk is instead created automatically at VM-create time from the
@@ -89,3 +89,65 @@ The playbook will:
 5. Mount and verify
 
 **Tags:** `-t partition`, `-t format`, `-t mount` (run specific steps only)
+
+## Extra Disks (add / list / delete)
+
+Add as many extra virtio-blk disks as needed at runtime, independent of the
+`data_disk_gb` column (which stays reserved for the single disk
+`create-vm.yaml` builds). Disks are named `<vm>-extra<N>.qcow2` in the VM's
+storage dir; both the next free index and the next free host target (`vdX`)
+are auto-detected from live **and** persistent config, so repeated runs never
+collide.
+
+Linux guests only: virtio-blk hot-plug works on a **running** VM
+(`--config --live`, visible immediately, no reboot); a **shut-off** VM gets
+the disk via `--config` only, visible on next boot.
+
+### Add
+
+```bash
+# one 10G disk (index/letter picked automatically)
+ap playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e extra_size=10G
+
+# four 2G disks in one run
+ap playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e count=4 -e extra_size=2G
+
+# override the target directory (default: VM's storage dir from vms.csv)
+ap playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e extra_dir=/data/disks
+```
+
+### List
+
+```bash
+ap playbooks/list-extra-disks.yaml -e vm_name=debian12-01
+```
+
+Shows each disk's index, virtual size, and its target in the live domain
+and/or persistent config:
+
+```
+extra1.qcow2: 2G, live=vdc, config=vdc
+extra2.qcow2: 2G, live=vdd, config=vdd
+```
+
+### Delete
+
+Detaches the disk (live + config on a running VM — virtio-blk hot-unplug)
+and deletes the qcow2 file. Destroys data, so `confirm=true` is required:
+
+```bash
+ap playbooks/delete-extra-disk.yaml -e vm_name=debian12-01 -e extra_index=2 -e confirm=true
+```
+
+### Identifying a disk inside the guest
+
+The guest kernel assigns its own `vdX` names, which usually differ from the
+host target. Each extra disk carries a serial `<vm>-extra<N>` — match on it:
+
+```bash
+lsblk -o NAME,SERIAL,SIZE
+# vdc  debian12-01-extra1  2G
+```
+
+Format/mount afterwards with `mount-disk.yaml` (pass the *guest* device
+name, e.g. `-e disk_device=/dev/vdc`).

@@ -33,7 +33,7 @@ ap playbooks/create-vm.yaml
 - [macOS VMs](docs/macos.md) - Hackintosh guests, blessed NVRAM, keyboard-free boot (network via DHCP)
 
 ### Storage
-- [Data Disks](docs/data-disks.md) - Attach, resize, and mount data disks
+- [Data Disks](docs/data-disks.md) - Attach, resize, and mount data disks; add/list/delete extra hot-plugged disks
 
 ### Access
 - [VM Console](docs/vm-console.md) - Access VM console (VNC/SPICE)
