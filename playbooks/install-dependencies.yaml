@@ -15,7 +15,6 @@
       - unzip
       - net-tools
       - ca-certificates
-      - software-properties-common
     kvm_packages:
       - qemu-kvm
       - qemu-utils
