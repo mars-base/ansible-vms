@@ -27,6 +27,11 @@ ssh_pwauth: {{ 'true' if _password != '' else 'false' }}
 disable_root: false
 
 write_files:
+  # LANs where deb.debian.org resolves to AAAA but has no working IPv6 route
+  # hang apt (and thus cloud-init's package install) on first boot.
+  - path: /etc/apt/apt.conf.d/99force-ipv4
+    content: |
+      Acquire::ForceIPv4 "true";
 {% if _password != '' %}
   - path: /etc/ssh/sshd_config.d/99-cloud-init-password.conf
     content: |
