@@ -82,7 +82,43 @@ ssh root@192.168.1.150 "grep nameserver /etc/resolv.conf"
 
 ## Bridge Configuration
 
-The KVM host requires a network bridge (`br0`) so VMs can access the LAN directly. Example `/etc/network/interfaces`:
+The KVM host requires a network bridge (`br0`) so VMs can access the LAN directly. Pick the method matching the host's network manager: **nmcli** if NetworkManager is active (most desktops), **ifupdown** for classic server configs. Check with `systemctl is-active NetworkManager`.
+
+### Method 1: nmcli (NetworkManager)
+
+First find the current connection profile, its IP config, and the NIC to bridge:
+
+```bash
+nmcli -f NAME,DEVICE,TYPE,STATE connection show
+nmcli -f ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns connection show "<existing profile name>"
+```
+
+Create the bridge carrying the same static IP (or use `ipv4.method auto` for DHCP on br0), then attach the NIC as a bridge port, then disable the old profile so it doesn't reclaim the NIC:
+
+```bash
+# 1. Create bridge br0 with the host's IP config
+sudo nmcli connection add type bridge ifname br0 con-name br0 \
+    ipv4.method manual ipv4.addresses 192.168.1.100/24 \
+    ipv4.gateway 192.168.1.1 ipv4.dns 192.168.1.1 \
+    bridge.stp no
+
+# 2. Attach the physical NIC as a bridge port
+sudo nmcli connection add type bridge-slave ifname eth0 con-name br0-port-eth0 master br0
+
+# 3. Stop the old profile from auto-activating
+sudo nmcli connection modify "<existing profile name>" connection.autoconnect no
+
+# 4. Switch over (brief link interruption; do this from the local console
+#    or accept the drop if connected remotely)
+sudo nmcli connection up br0
+sudo nmcli connection down "<existing profile name>"
+```
+
+Both connections persist across reboots. To roll back: `nmcli connection up "<existing profile name>"` and restore `connection.autoconnect yes`.
+
+### Method 2: ifupdown (/etc/network/interfaces)
+
+`/etc/network/interfaces` example:
 
 ```bash
 # Physical NIC — manual mode, no IP (managed by bridge)
