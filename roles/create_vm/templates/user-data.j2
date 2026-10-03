@@ -26,6 +26,11 @@ users:
 ssh_pwauth: {{ 'true' if _password != '' else 'false' }}
 disable_root: false
 
+# cc_locale only runs update-locale, which fails validation unless the
+# locale is generated first (cloud images ship only C.UTF-8).
+bootcmd:
+  - locale-gen {{ vm.cloud_init_locale | default(vm_cloud_init_locale) }}
+
 write_files:
   # LANs where deb.debian.org resolves to AAAA but has no working IPv6 route
   # hang apt (and thus cloud-init's package install) on first boot.
