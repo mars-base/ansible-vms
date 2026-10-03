@@ -59,6 +59,28 @@ When `storage_dir` is specified:
 
 When `storage_dir` is empty, VMs use the default path `/var/lib/libvirt/images/<vm-name>/`.
 
+### Storage Directory Permissions
+
+QEMU processes run as the `libvirt-qemu` user, so that user must be able to
+**traverse every path component** and **read/write the disk files**. A custom
+`storage_dir` commonly breaks this in two ways:
+
+- **Untraversable path**: e.g. anything under `/home/<user>/` fails because
+  home directories are `drwx------`. Error signature:
+  `Cannot access storage file ... (as uid:64055): Permission denied`.
+  Fix by mounting VM storage under a world-traversable path (e.g. `/mnt/wdisk`).
+- **Wrong file ownership**: files created by root (via the playbooks) are not
+  writable by `libvirt-qemu`. Fix once per storage root with a default ACL so
+  all future VM subdirectories inherit access:
+
+```bash
+sudo chown -R libvirt-qemu:libvirt-qemu /mnt/wdisk/kvm   # one-off
+# or better — applies to files/dirs the playbooks create later too:
+sudo setfacl -d -m u:libvirt-qemu:rwX /mnt/wdisk/kvm
+```
+
+The base `qcow2` images only need to be readable (they are backing files).
+
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE) for details.
