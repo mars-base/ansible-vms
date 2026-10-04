@@ -1,9 +1,10 @@
 #cloud-config
+{% set _locale = vm.cloud_init_locale | default(vm_cloud_init_locale) %}
 
 hostname: {{ vm.name }}
 fqdn: {{ vm.name }}
 manage_etc_hosts: true
-locale: {{ vm.cloud_init_locale | default(vm_cloud_init_locale) }}
+locale: {{ _locale }}
 timezone: {{ vm.cloud_init_timezone | default(vm_cloud_init_timezone) }}
 
 users:
@@ -26,39 +27,31 @@ users:
 ssh_pwauth: {{ 'true' if _password != '' else 'false' }}
 disable_root: false
 
-# cc_locale only runs update-locale, which fails validation unless the
-# locale is generated first (cloud images ship only C.UTF-8).
+# Debian cloud images ship a cloud.cfg that DROPS the write-files module
+# (only write-files-deferred exists, in final stage), so every file drop
+# here goes through bootcmd, which runs before the config stage.
 bootcmd:
-  - locale-gen {{ vm.cloud_init_locale | default(vm_cloud_init_locale) }}
-
-write_files:
-  # LANs where deb.debian.org resolves to AAAA but has no working IPv6 route
-  # hang apt (and thus cloud-init's package install) on first boot.
-  - path: /etc/apt/apt.conf.d/99force-ipv4
-    content: |
-      Acquire::ForceIPv4 "true";
-{% if vm_apt_mirror is defined and vm_apt_mirror | length > 0 %}
-  # Debian cloud images point sources at mirror+file:// lists; swapping the
-  # list contents redirects apt without touching the sources files. The
-  # security list mirrors the main one with a debian-security path.
-  - path: /etc/apt/mirrors/debian.list
-    content: "{{ vm_apt_mirror }}\n"
-  - path: /etc/apt/mirrors/debian-security.list
-    content: "{{ vm_apt_mirror | regex_replace('/debian/?$', '/debian-security') }}\n"
-{% endif %}
+  # cc_locale's update-locale fails validation unless the locale exists;
+  # Debian's locale-gen takes no argument, so enable it in /etc/locale.gen.
+  - sed -i "s/^# {{ _locale }} {{ _locale.split('.')[-1] }}$/{{ _locale }} {{ _locale.split('.')[-1] }}/" /etc/locale.gen; locale-gen; update-locale LANG={{ _locale }}
+  # LANs where deb.debian.org resolves to AAAA but has no working IPv6
+  # route hang apt (and cloud-init's package install) on first boot.
+  - echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4
 {% if _password != '' %}
-  - path: /etc/ssh/sshd_config.d/99-cloud-init-password.conf
-    content: |
-      PasswordAuthentication yes
-      PermitRootLogin yes
+  - printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' > /etc/ssh/sshd_config.d/99-cloud-init-password.conf
 {% endif %}
-{% if vm.cloud_init_ssh_authorized_keys is defined and vm.cloud_init_ssh_authorized_keys | length > 0 %}
-  - path: /root/.ssh/authorized_keys
-    content: |
-{% for key in vm.cloud_init_ssh_authorized_keys %}
-      {{ key }}
-{% endfor %}
-    permissions: "0600"
+{% if vm_apt_mirror is defined and vm_apt_mirror | length > 0 %}
+
+# cc_apt_configure (config stage) regenerates the mirror+file:// lists after
+# bootcmd, so the mirror must go through its own apt: config, not file edits.
+apt:
+  preserve_sources_list: false
+  primary:
+    - arches: [default]
+      uri: {{ vm_apt_mirror }}
+  security:
+    - arches: [default]
+      uri: {{ vm_apt_mirror | regex_replace('/debian/?$', '/debian-security') }}
 {% endif %}
 
 package_update: true
