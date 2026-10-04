@@ -65,6 +65,10 @@ vm_cloud_init_user: root
 vm_cloud_init_ssh_password: ""
 vm_cloud_init_timezone: Asia/Shanghai
 vm_cloud_init_locale: en_US.UTF-8
+# Debian apt mirror base URL for first-boot package installs. Mainland
+# China mirrors, e.g. https://mirrors.aliyun.com/debian (see group_vars
+# example). Empty = keep the image default deb.debian.org.
+vm_apt_mirror: ""
 # Built-in packages (always installed)
 vm_cloud_init_packages:
   - qemu-guest-agent

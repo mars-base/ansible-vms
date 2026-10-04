@@ -24,6 +24,19 @@ vm_cloud_init_timezone: "Asia/Shanghai"
 # Locale (e.g. en_US.UTF-8, zh_CN.UTF-8)
 vm_cloud_init_locale: "en_US.UTF-8"
 
+# Debian apt mirror base URL for first-boot package installs. Empty/omitted
+# keeps the image default (deb.debian.org). The examples below are for
+# mainland China networks, where deb.debian.org is slow or IPv6-unreachable;
+# outside mainland China the default is usually fine.
+# The security list is derived by swapping the trailing /debian for
+# /debian-security. Chinese mirrors:
+#   https://mirrors.aliyun.com/debian            (default here; fast, 200)
+#   https://mirrors.cernet.edu.cn/debian         (Cernet/edu.cn scheduler,
+#                                                 302-redirects to nearest node)
+#   https://mirrors.ustc.edu.cn/debian           (direct USTC)
+#   https://mirrors.tuna.tsinghua.edu.cn/debian  (blocks plain curl, 403)
+vm_apt_mirror: ""
+
 # SSH authorized keys (list of public keys)
 # Uncomment and add your keys for passwordless SSH access:
 # vm_cloud_init_ssh_authorized_keys:

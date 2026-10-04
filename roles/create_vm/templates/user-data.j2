@@ -37,6 +37,15 @@ write_files:
   - path: /etc/apt/apt.conf.d/99force-ipv4
     content: |
       Acquire::ForceIPv4 "true";
+{% if vm_apt_mirror is defined and vm_apt_mirror | length > 0 %}
+  # Debian cloud images point sources at mirror+file:// lists; swapping the
+  # list contents redirects apt without touching the sources files. The
+  # security list mirrors the main one with a debian-security path.
+  - path: /etc/apt/mirrors/debian.list
+    content: "{{ vm_apt_mirror }}\n"
+  - path: /etc/apt/mirrors/debian-security.list
+    content: "{{ vm_apt_mirror | regex_replace('/debian/?$', '/debian-security') }}\n"
+{% endif %}
 {% if _password != '' %}
   - path: /etc/ssh/sshd_config.d/99-cloud-init-password.conf
     content: |
