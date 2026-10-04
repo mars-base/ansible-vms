@@ -40,10 +40,12 @@ bootcmd:
 {% if _password != '' %}
   - printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' > /etc/ssh/sshd_config.d/99-cloud-init-password.conf
 {% endif %}
-{% if vm_apt_mirror is defined and vm_apt_mirror | length > 0 %}
+{% if vm_apt_mirror is defined and vm_apt_mirror | length > 0 and vm.os | default('') is match('^debian') %}
 
-# cc_apt_configure (config stage) regenerates the mirror+file:// lists after
-# bootcmd, so the mirror must go through its own apt: config, not file edits.
+# Debian-only: the /debian -> /debian-security path mapping and the
+# mirror+file:// list mechanism are specific to Debian cloud images.
+# cc_apt_configure (config stage) regenerates those lists after bootcmd,
+# so the mirror must go through cloud-init's own apt: config.
 apt:
   preserve_sources_list: false
   primary:
