@@ -104,8 +104,8 @@
       shell: virsh domstate {{ _vms[0].name }}
       register: _vm_state_wait
       until: _vm_state_wait.stdout == 'shut off'
-      retries: 90
-      delay: 2
+      retries: 60
+      delay: 5
       changed_when: false
       when: snap_action == 'create' and not _is_macos and halt | default(true) | bool and _vm_state_before.stdout == 'running'
 
@@ -161,8 +161,8 @@
       shell: "virsh domstate {{ _vms[0].name }}"
       register: _vm_state_wait_restore
       until: _vm_state_wait_restore.stdout == 'shut off'
-      retries: 90
-      delay: 2
+      retries: 60
+      delay: 5
       changed_when: false
       when: snap_action == 'restore' and not _is_macos and _vm_state_before_restore.stdout == 'running'
 
