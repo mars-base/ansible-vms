@@ -41,6 +41,7 @@ ap playbooks/create-vm.yaml
 
 ### Configuration
 - [Network](docs/network.md) - Network architecture and bridge configuration
+- [Firewall](roles/nftables/README.md) - nftables host firewall for VMs (playbooks/nftables.yaml)
 - [Base Images](docs/base-images.md) - Download Linux and Windows base images
 
 ## Custom Storage Path

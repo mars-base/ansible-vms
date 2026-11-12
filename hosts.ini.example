@@ -25,3 +25,8 @@ local ansible_host=127.0.0.1 ansible_connection=local
 vm_dev
 vm_prod
 vm_test
+
+# nftables: hosts that receive the firewall ruleset from playbooks/nftables.yaml.
+# Copy group_vars/nftables/main.yml.example to group_vars/nftables/main.yml first.
+[nftables]
+# debian12-01

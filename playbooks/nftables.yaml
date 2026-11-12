@@ -1,0 +1,31 @@
+---
+# Manage the host firewall with nftables. Debian-family hosts for now.
+#
+# The ruleset accepts loopback, established/related traffic, DHCP replies,
+# ICMP, SSH from nftables_ssh_sources, and connections matching nftables_rules;
+# anything else is dropped. SSH from a source outside nftables_ssh_sources is
+# dropped even when that source is in a set.
+#
+# The sets, rules and SSH sources live in the gitignored
+# group_vars/nftables/main.yml. Copy the .example file first. Hosts are
+# selected by the [nftables] inventory group; override with -e HOSTS=<pattern>
+# and set the variables for those hosts.
+#
+#   cd ansible
+#   uv run ansible-playbook playbooks/nftables.yaml
+#   uv run ansible-playbook playbooks/nftables.yaml -e HOSTS=<pattern>
+#
+# nftables_ssh_sources must contain at least one entry unless
+# nftables_ssh_allow_all is true, and should include the control node; the role
+# refuses to apply an empty list otherwise. Existing SSH sessions survive the
+# reload (established/related is accepted), but new ones are dropped unless the
+# source is in the list or nftables_ssh_allow_all is true. Verify the list
+# before the first run.
+
+- name: Apply nftables host firewall
+  hosts: "{{ HOSTS | default('nftables') }}"
+  gather_facts: true
+  become: true
+  roles:
+    - role: nftables
+      tags: [nftables]

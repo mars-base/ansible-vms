@@ -1,0 +1,45 @@
+---
+# Host firewall variables for playbooks/nftables.yaml.
+# Copy this file to main.yml (gitignored) and fill in live values.
+
+# Named address sets. Entries are IPv4 CIDRs or individual addresses (a /32
+# is implied).
+nftables_sets:
+  - name: trusted
+    subnet:
+      - 192.168.0.0/16
+
+# Sources allowed to establish host SSH connections. At least one entry is
+# required unless nftables_ssh_allow_all is true; the role refuses to apply an
+# empty list otherwise. Independent of the sets above: a host in nftables_sets
+# still cannot SSH unless it is listed here. Include the Ansible control node.
+nftables_ssh_sources:
+  - 192.168.0.0/16
+
+# Host SSH ports. List every port sshd listens on; hosts with non-standard
+# ports can override the list in host_vars/<host>.yml.
+nftables_ssh_ports:
+  - 22
+
+# Emergency switch: accept SSH from any source, bypassing
+# nftables_ssh_sources. Leave false in normal operation.
+nftables_ssh_allow_all: false
+
+# The role installs nftables and removes the iptables persistence packages so
+# two managers cannot write the ruleset. Set false when the host still relies
+# on iptables-persistent.
+nftables_remove_iptables_persistent: true
+
+# Forwarding and NAT defaults.
+filter_forward_default_policy: drop
+net_postrouting_default_policy: accept
+
+# Rules are inserted verbatim into the named chains. Supported chains:
+# filter_default, filter_forward, nat_prerouting, nat_postrouting. SSH is
+# handled in the template before these rules, so adding an SSH rule here
+# cannot bypass nftables_ssh_sources. A rule that references an undefined set
+# is skipped. Example: allow HTTP on 8080 from the trusted intranet.
+nftables_rules:
+  - chain: filter_default
+    rules:
+      - ip saddr $trusted tcp dport 8080 counter jump nolimit  # HTTP example

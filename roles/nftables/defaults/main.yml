@@ -1,0 +1,33 @@
+---
+# Sources allowed to establish host SSH connections. At least one entry is
+# required unless nftables_ssh_allow_all is true. Entries are IPv4 CIDRs or
+# individual addresses. SSH from any other source is dropped, even when the
+# source is in one of the nftables_sets below. Include the Ansible control
+# node.
+nftables_ssh_sources: []
+
+# Accept SSH from any source. When true, nftables_ssh_sources may be empty.
+nftables_ssh_allow_all: false
+
+# Host SSH ports. List every port sshd listens on; hosts with non-standard
+# ports can override the list in host_vars/<host>.yml.
+nftables_ssh_ports:
+  - 22
+
+filter_forward_default_policy: drop
+net_postrouting_default_policy: accept
+
+# Two packet managers writing the ruleset is a common source of surprises.
+# Set false when the host still relies on iptables-persistent.
+nftables_remove_iptables_persistent: true
+
+# Named address sets. Empty sets are skipped, and rules referencing undefined
+# sets are skipped as well, so placeholders cannot render an invalid ruleset.
+# The built-in `ssh_sources` set is generated from nftables_ssh_sources and
+# must not be redefined here.
+nftables_sets: []
+
+# Rules are inserted verbatim into the named chains. The supported chains are
+# filter_default, filter_forward, nat_prerouting and nat_postrouting. SSH is
+# handled in the template from nftables_ssh_sources before these rules run.
+nftables_rules: []
