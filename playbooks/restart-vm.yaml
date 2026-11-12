@@ -44,8 +44,8 @@
       shell: virsh domstate {{ _vms[0].name }}
       register: _wait_state
       until: _wait_state.stdout == 'shut off'
-      retries: 30
-      delay: 2
+      retries: 60
+      delay: 5
       changed_when: false
       when: _vm_state.stdout == 'running'
 
