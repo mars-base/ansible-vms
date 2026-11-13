@@ -3,19 +3,19 @@
 #
 # Usage:
 #   # Create user with SSH key and passwordless sudo
-#   ap playbooks/setup-user.yaml -e "HOSTS=debian12-01" -e "username=diwen"
+#   ap playbooks/setup-user.yaml -e "HOSTS=debian12-01" -e "username=admin"
 #
 #   # Specify SSH public key file
-#   ap playbooks/setup-user.yaml -e "HOSTS=debian12-01" -e "username=diwen" -e "ssh_pubkey=/path/to/id_rsa.pub"
+#   ap playbooks/setup-user.yaml -e "HOSTS=debian12-01" -e "username=admin" -e "ssh_pubkey=/path/to/id_rsa.pub"
 #
 #   # Multiple VMs (using host group, Windows hosts auto-skipped)
-#   ap playbooks/setup-user.yaml -e "HOSTS=vm_dev" -e "username=diwen"
+#   ap playbooks/setup-user.yaml -e "HOSTS=vm_dev" -e "username=admin"
 #
 #   # Fix UID (and optionally GID) so the user has the same numeric id on every host.
 #   # If user_uid/user_gid are not supplied, defaults to the current control-host
 #   # UID/GID (i.e. the operator running ansible), so NFS/file-perms line up.
-#   ap playbooks/setup-user.yaml -e "HOSTS=vm_dev" -e "username=diwen" -e "user_uid=2000"
-#   ap playbooks/setup-user.yaml -e "HOSTS=vm_dev" -e "username=diwen" -e "user_uid=2000" -e "user_gid=2000"
+#   ap playbooks/setup-user.yaml -e "HOSTS=vm_dev" -e "username=admin" -e "user_uid=2000"
+#   ap playbooks/setup-user.yaml -e "HOSTS=vm_dev" -e "username=admin" -e "user_uid=2000" -e "user_gid=2000"
 
 - name: Setup user account
   hosts: "{{ HOSTS | default('vms') }}"
