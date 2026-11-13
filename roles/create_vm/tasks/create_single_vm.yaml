@@ -8,8 +8,50 @@
 
 - name: "Skip {{ vm.name }} - already exists"
   debug:
-    msg: "VM {{ vm.name }} already exists, skipping."
+    msg: "VM {{ vm.name }} already exists, skipping creation."
   when: _vm_exists.rc == 0
+
+# Older Linux domains predate the serial log in domain-linux.xml.j2. Re-running
+# create-vm adds the missing <log> element without re-rendering the whole XML,
+# so disks attached after creation are preserved. Applies on the next start.
+- name: "Ensure serial console log for {{ vm.name }}"
+  when:
+    - _vm_exists.rc == 0
+    - vm.type | default('linux') == 'linux'
+  block:
+    - name: "Read {{ vm.name }} domain XML"
+      command: virsh dumpxml {{ vm.name }} --inactive
+      register: _vm_xml
+      changed_when: false
+
+    - name: "Add serial log to {{ vm.name }} domain XML"
+      when: "'-serial.log' not in _vm_xml.stdout"
+      block:
+        - name: "Write {{ vm.name }} domain XML to a temp file"
+          copy:
+            content: "{{ _vm_xml.stdout }}"
+            dest: "/tmp/{{ vm.name }}.xml"
+            mode: "0644"
+
+        - name: "Insert serial log element for {{ vm.name }}"
+          lineinfile:
+            path: "/tmp/{{ vm.name }}.xml"
+            insertafter: "<serial type='pty'>"
+            line: "      <log file='/var/log/libvirt/qemu/{{ vm.name }}-serial.log' append='on'/>"
+          register: _vm_serial_log
+
+        - name: "Assert a serial pty device exists for {{ vm.name }}"
+          assert:
+            that: _vm_serial_log.changed
+            fail_msg: "No <serial type='pty'> device in {{ vm.name }} domain XML; cannot add a console log."
+
+        - name: "Define {{ vm.name }} with serial log"
+          command: virsh define /tmp/{{ vm.name }}.xml
+
+        - name: "Clean up XML file for {{ vm.name }}"
+          file:
+            path: "/tmp/{{ vm.name }}.xml"
+            state: absent
 
 - name: "Create VM {{ vm.name }}"
   when: _vm_exists.rc != 0
