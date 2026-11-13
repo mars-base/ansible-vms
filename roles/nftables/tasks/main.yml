@@ -1,10 +1,11 @@
 ---
-- name: Require a Debian-family host
+- name: Require a supported host
   ansible.builtin.assert:
     that:
-      - ansible_facts.os_family == 'Debian'
+      - ansible_facts.os_family in ['Debian', 'RedHat']
     fail_msg: >-
-      The nftables role currently supports Debian-family hosts only.
+      The nftables role supports Debian-family (Debian, Ubuntu) and
+      RedHat-family (Fedora) hosts only.
     quiet: true
 
 - name: Require nftables_ssh_sources to be a list
@@ -84,12 +85,19 @@
     fail_msg: "nftables_sets contains duplicate set names."
     quiet: true
 
-- name: Install nftables
+- name: Install nftables (Debian family)
   ansible.builtin.apt:
     name: nftables
     state: present
     update_cache: true
     cache_valid_time: 3600
+  when: ansible_facts.os_family == 'Debian'
+
+- name: Install nftables (RedHat family)
+  ansible.builtin.dnf:
+    name: nftables
+    state: present
+  when: ansible_facts.os_family == 'RedHat'
 
 - name: Remove iptables persistence packages
   ansible.builtin.apt:
@@ -97,7 +105,9 @@
       - netfilter-persistent
       - iptables-persistent
     state: absent
-  when: nftables_remove_iptables_persistent | bool
+  when:
+    - ansible_facts.os_family == 'Debian'
+    - nftables_remove_iptables_persistent | bool
 
 - name: Check for ufw
   ansible.builtin.stat:
@@ -121,6 +131,23 @@
     - nftables_ufw.stat.exists
     - "'Status: active' in (nftables_ufw_status.stdout | default(''))"
 
+- name: Check for firewalld
+  ansible.builtin.stat:
+    path: /usr/sbin/firewalld
+  register: nftables_firewalld
+
+# Masked so D-Bus activation (for example a firewall-cmd call) cannot start
+# it again. Restore with: systemctl unmask firewalld
+- name: Disable firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: stopped
+    enabled: false
+    masked: true
+  when:
+    - nftables_disable_firewalld | bool
+    - nftables_firewalld.stat.exists
+
 - name: Create /etc/nftables.d
   ansible.builtin.file:
     path: /etc/nftables.d
@@ -133,7 +160,7 @@
 - name: Apply nftables.conf
   ansible.builtin.template:
     src: nftables.conf.j2
-    dest: /etc/nftables.conf
+    dest: "{{ _nftables_config_file }}"
     owner: root
     group: root
     mode: "0640"
