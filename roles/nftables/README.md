@@ -2,7 +2,9 @@
 
 ## Overview
 
-Manage the host firewall with nftables. Debian-family hosts only.
+Manage the host firewall with nftables. Debian-family hosts (Debian, Ubuntu).
+
+On Ubuntu, ufw is installed and enabled on some images; it is disabled by default (see `nftables_disable_ufw`) so the two managers do not fight over the ruleset.
 
 ## Task logic
 
@@ -17,9 +19,10 @@ Manage the host firewall with nftables. Debian-family hosts only.
 After validation:
 
 1. Install nftables; when `nftables_remove_iptables_persistent` is true (default), remove netfilter-persistent / iptables-persistent.
-2. Create `/etc/nftables.d` and make sure the nftables service is started.
-3. Render the template to `/etc/nftables.conf`, validating it with `nft -c -f` before writing; reload nftables when the content changes.
-4. Enable nftables at boot.
+2. When ufw is installed and active and `nftables_disable_ufw` is true (default), run `ufw --force disable`.
+3. Create `/etc/nftables.d` and make sure the nftables service is started.
+4. Render the template to `/etc/nftables.conf`, validating it with `nft -c -f` before writing; reload nftables when the content changes.
+5. Enable nftables at boot.
 
 ## Template logic
 
@@ -62,6 +65,14 @@ Default policies for the FORWARD and POSTROUTING chains; defaults are `drop` / `
 ### nftables_remove_iptables_persistent
 
 Remove netfilter-persistent / iptables-persistent when true (default). Set false when the host still relies on iptables-persistent.
+
+### nftables_disable_ufw
+
+Disable ufw when it is installed and active; default `true`. Existing ufw rules stay in `/etc/ufw` but are no longer applied. Set false to leave ufw alone (do not combine with this role's rules for inbound traffic unless you know how the two rulesets interact).
+
+## Notes
+
+- The distro-shipped `/etc/nftables.conf` on Ubuntu starts with `flush ruleset`; this role replaces that file with its own template, which only deletes and recreates `inet _filter` and `inet _nat`, so unrelated tables (for example Docker's) are left untouched.
 
 ## filter built-in chains
 

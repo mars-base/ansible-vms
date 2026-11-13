@@ -99,6 +99,28 @@
     state: absent
   when: nftables_remove_iptables_persistent | bool
 
+- name: Check for ufw
+  ansible.builtin.stat:
+    path: /usr/sbin/ufw
+  register: nftables_ufw
+
+- name: Read ufw status
+  ansible.builtin.command: /usr/sbin/ufw status
+  register: nftables_ufw_status
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - nftables_disable_ufw | bool
+    - nftables_ufw.stat.exists
+
+- name: Disable ufw
+  ansible.builtin.command: /usr/sbin/ufw --force disable
+  when:
+    - nftables_disable_ufw | bool
+    - nftables_ufw.stat.exists
+    - "'Status: active' in (nftables_ufw_status.stdout | default(''))"
+
 - name: Create /etc/nftables.d
   ansible.builtin.file:
     path: /etc/nftables.d
