@@ -130,11 +130,6 @@
     mode: "0755"
   tags: [nftables_conf, nftables_d]
 
-- name: Make sure nftables is started
-  ansible.builtin.service:
-    name: nftables
-    state: started
-
 - name: Apply nftables.conf
   ansible.builtin.template:
     src: nftables.conf.j2
@@ -145,6 +140,32 @@
     validate: /usr/sbin/nft -c -f %s
   notify: Reload nftables
   tags: [nftables_conf]
+
+# Start after the template is in place. Starting first would load the
+# distro-shipped /etc/nftables.conf (flush ruleset + an empty inet filter
+# table), which then lingers in the live ruleset.
+- name: Make sure nftables is started
+  ansible.builtin.service:
+    name: nftables
+    state: started
+
+# Remove the distro-shipped empty inet filter table if nftables was already
+# running with the distro config. Only a provably inert table (no rules, no
+# drop/reject policies) is deleted; anything else is left untouched.
+- name: Read the inet filter table
+  ansible.builtin.command: /usr/sbin/nft -j list table inet filter
+  register: nftables_inet_filter
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Remove an empty leftover inet filter table
+  ansible.builtin.command: /usr/sbin/nft delete table inet filter
+  when:
+    - nftables_inet_filter.rc == 0
+    - "'\"rule\"' not in nftables_inet_filter.stdout"
+    - "'\"policy\": \"drop\"' not in nftables_inet_filter.stdout"
+    - "'\"policy\": \"reject\"' not in nftables_inet_filter.stdout"
 
 - name: Flush handlers
   ansible.builtin.meta: flush_handlers
