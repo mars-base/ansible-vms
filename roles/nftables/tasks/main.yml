@@ -5,7 +5,7 @@
       - ansible_facts.os_family in ['Debian', 'RedHat']
     fail_msg: >-
       The nftables role supports Debian-family (Debian, Ubuntu) and
-      RedHat-family (Fedora) hosts only.
+      RedHat-family (Fedora, Rocky) hosts only.
     quiet: true
 
 - name: Require nftables_ssh_sources to be a list

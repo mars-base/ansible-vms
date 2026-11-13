@@ -27,7 +27,7 @@ vm_prod
 vm_test
 
 # nftables: hosts that receive the firewall ruleset from playbooks/nftables.yaml.
-# Supported systems: Debian family (Debian, Ubuntu), Fedora (RedHat family).
+# Supported systems: Debian family (Debian, Ubuntu), RedHat family (Fedora, Rocky Linux).
 # Copy group_vars/nftables/main.yml.example to group_vars/nftables/main.yml first.
 [nftables]
 # node1

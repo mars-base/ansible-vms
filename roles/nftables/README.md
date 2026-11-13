@@ -2,9 +2,9 @@
 
 ## Overview
 
-Manage the host firewall with nftables. Debian-family hosts (Debian, Ubuntu) and RedHat-family hosts (Fedora).
+Manage the host firewall with nftables. Debian-family hosts (Debian, Ubuntu) and RedHat-family hosts (Fedora, Rocky Linux).
 
-On Ubuntu, ufw is installed and enabled on some images; it is disabled by default (see `nftables_disable_ufw`) so the two managers do not fight over the ruleset. On Fedora, firewalld is stopped and masked by default (see `nftables_disable_firewalld`) for the same reason.
+On Ubuntu, ufw is installed and enabled on some images; it is disabled by default (see `nftables_disable_ufw`) so the two managers do not fight over the ruleset. On Fedora and Rocky, firewalld is stopped and masked by default (see `nftables_disable_firewalld`) for the same reason.
 
 ## Task logic
 
@@ -19,7 +19,7 @@ On Ubuntu, ufw is installed and enabled on some images; it is disabled by defaul
 After validation:
 
 1. Install nftables (apt on Debian family, dnf on RedHat family); on Debian family, when `nftables_remove_iptables_persistent` is true (default), remove netfilter-persistent / iptables-persistent.
-2. When ufw is installed and active and `nftables_disable_ufw` is true (default), run `ufw --force disable`. On Fedora, when firewalld is installed and `nftables_disable_firewalld` is true (default), stop and mask it.
+2. When ufw is installed and active and `nftables_disable_ufw` is true (default), run `ufw --force disable`. On RedHat family, when firewalld is installed and `nftables_disable_firewalld` is true (default), stop and mask it.
 3. Create `/etc/nftables.d`, render the template to `/etc/nftables.conf` (Debian family) or `/etc/sysconfig/nftables.conf` (RedHat family), validated with `nft -c -f` before writing, reload nftables when the content changes, then make sure the nftables service is started — starting after the template means the first load already uses the role's config, not the distro-shipped one.
 4. If an `inet filter` table is still present (a host that was already running the distro config), delete it when it is provably inert: no rules and no drop/reject policies. A table with rules or restrictive policies is left untouched.
 5. Enable nftables at boot.
@@ -72,12 +72,12 @@ Disable ufw when it is installed and active; default `true`. Existing ufw rules 
 
 ### nftables_disable_firewalld
 
-On Fedora, stop and mask firewalld when it is installed; default `true`. Masking also blocks D-Bus activation, so a `firewall-cmd` call cannot bring it back. Restore with `systemctl unmask firewalld`. Set false to leave firewalld alone.
+On RedHat family, stop and mask firewalld when it is installed; default `true`. Masking also blocks D-Bus activation, so a `firewall-cmd` call cannot bring it back. Restore with `systemctl unmask firewalld`. Set false to leave firewalld alone.
 
 ## Notes
 
 - The distro-shipped `/etc/nftables.conf` on Ubuntu starts with `flush ruleset`; this role replaces that file with its own template, which only deletes and recreates `inet _filter` and `inet _nat`, so unrelated tables (for example Docker's) are left untouched. The service is started after the template is written, so the distro config is never loaded on a service that was not already running. If nftables was already running with the distro config, its empty `inet filter` table is removed by the role only when it has no rules and no drop/reject policies; the role never deletes a table that could still filter traffic.
-- Fedora's `nftables.service` loads `/etc/sysconfig/nftables.conf` and its `ExecReload` begins with `flush ruleset`, which would wipe foreign tables. The role therefore reloads by running `nft -f <config>` directly instead of `systemctl reload nftables`.
+- On the RedHat family (Fedora, Rocky), `nftables.service` loads `/etc/sysconfig/nftables.conf` and its `ExecReload` begins with `flush ruleset`, which would wipe foreign tables. The role therefore reloads by running `nft -f <config>` directly instead of `systemctl reload nftables`.
 
 ## filter built-in chains
 
