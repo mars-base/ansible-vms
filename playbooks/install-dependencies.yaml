@@ -30,7 +30,6 @@
     redhat_packages:
       - vim-enhanced
       - curl
-      - wget
       - git
       - htop
       - tree
@@ -47,6 +46,8 @@
       - virt-install
       - virt-viewer
       - genisoimage
+    # Fedora no longer ships wget; wget2 is its replacement
+    redhat_wget_package: "{{ 'wget2' if ansible_distribution == 'Fedora' else 'wget' }}"
     redhat_libvirt_sockets:
       - virtqemud.socket
       - virtnetworkd.socket
@@ -99,7 +100,7 @@
 
     - name: Install packages (Fedora/Rocky)
       dnf:
-        name: "{{ redhat_packages }}"
+        name: "{{ redhat_packages + [redhat_wget_package] }}"
         state: present
       when: ansible_os_family == "RedHat"
 
