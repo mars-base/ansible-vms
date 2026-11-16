@@ -1,4 +1,19 @@
-# VM Console Access
+---
+title: VM Console
+description: Access the VM display console via SPICE or VNC.
+weight: 90
+icon: fa-solid fa-terminal
+menus:
+  main:
+    identifier: docs-vm-console
+    parent: docs
+    weight: 90
+    params:
+      icon: fa-solid fa-terminal
+cascade:
+  type: docs
+  footer_style: slim
+---
 
 VMs use different graphics backends based on OS type:
 - **Windows VMs**: SPICE graphics (port 5900+)

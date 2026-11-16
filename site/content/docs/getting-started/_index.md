@@ -1,4 +1,19 @@
-# Getting Started
+---
+title: Getting Started
+description: Install dependencies and create your first KVM virtual machine.
+weight: 10
+icon: fa-solid fa-rocket
+menus:
+  main:
+    identifier: docs-getting-started
+    parent: docs
+    weight: 10
+    params:
+      icon: fa-solid fa-rocket
+cascade:
+  type: docs
+  footer_style: slim
+---
 
 ## Requirements
 
@@ -62,12 +77,12 @@ ansible-vms/
 
 ## Next Steps
 
-- [VM Definition](vm-definition.md) - Configure VMs in vms.csv
-- [VM Lifecycle](vm-lifecycle.md) - Start, stop, restart, destroy VMs
-- [Snapshots](snapshots.md) - Create and restore VM snapshots
-- [User Accounts](setup-user.md) - Setup Linux user accounts
-- [Data Disks](data-disks.md) - Attach, resize, and mount data disks
-- [VM Console](vm-console.md) - Access VM console
-- [Remote Desktop](remote-desktop.md) - RDP access for Windows VMs
-- [Network](network.md) - Network architecture and bridge configuration
-- [Base Images](base-images.md) - Download Linux and Windows base images
+- [VM Definition](/docs/vm-definition/) - Configure VMs in vms.csv
+- [VM Lifecycle](/docs/vm-lifecycle/) - Start, stop, restart, destroy VMs
+- [Snapshots](/docs/snapshots/) - Create and restore VM snapshots
+- [User Accounts](/docs/setup-user/) - Setup Linux user accounts
+- [Data Disks](/docs/data-disks/) - Attach, resize, and mount data disks
+- [VM Console](/docs/vm-console/) - Access VM console
+- [Remote Desktop](/docs/remote-desktop/) - RDP access for Windows VMs
+- [Network](/docs/network/) - Network architecture and bridge configuration
+- [Base Images](/docs/base-images/) - Download Linux and Windows base images

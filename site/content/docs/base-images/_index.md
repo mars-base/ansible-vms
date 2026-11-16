@@ -1,4 +1,19 @@
-# Base Images
+---
+title: Base Images
+description: Download Linux and Windows base images for VMs.
+weight: 40
+icon: fa-solid fa-compact-disc
+menus:
+  main:
+    identifier: docs-base-images
+    parent: docs
+    weight: 40
+    params:
+      icon: fa-solid fa-compact-disc
+cascade:
+  type: docs
+  footer_style: slim
+---
 
 ## Linux Base Images
 

@@ -23,26 +23,29 @@ ap playbooks/create-vm.yaml
 ## Documentation
 
 ### Getting Started
-- [Getting Started](docs/getting-started.md) - Installation, structure, and first steps
-- [VM Definition](docs/vm-definition.md) - Configure VMs in vms.csv
+- [Getting Started](site/content/docs/getting-started/_index.md) - Installation, structure, and first steps
+- [VM Definition](site/content/docs/vm-definition/_index.md) - Configure VMs in vms.csv
 
 ### VM Management
-- [VM Lifecycle](docs/vm-lifecycle.md) - Start, stop, restart, destroy VMs
-- [Snapshots](docs/snapshots.md) - Create and restore VM snapshots
-- [User Accounts](docs/setup-user.md) - Setup Linux user accounts
-- [macOS VMs](docs/macos.md) - Hackintosh guests, blessed NVRAM, keyboard-free boot (network via DHCP)
+- [VM Lifecycle](site/content/docs/vm-lifecycle/_index.md) - Start, stop, restart, destroy VMs
+- [Snapshots](site/content/docs/snapshots/_index.md) - Create and restore VM snapshots
+- [User Accounts](site/content/docs/setup-user/_index.md) - Setup Linux user accounts
+- [macOS VMs](site/content/docs/macos/_index.md) - Hackintosh guests, blessed NVRAM, keyboard-free boot (network via DHCP)
+- [macOS Base Image](site/content/docs/macos-base-image/_index.md) - How the macOS Sonoma base image was built
 
 ### Storage
-- [Data Disks](docs/data-disks.md) - Attach, resize, and mount data disks; add/list/delete extra hot-plugged disks
+- [Data Disks](site/content/docs/data-disks/_index.md) - Attach, resize, and mount data disks; add/list/delete extra hot-plugged disks
 
 ### Access
-- [VM Console](docs/vm-console.md) - Access VM console (VNC/SPICE)
-- [Remote Desktop](docs/remote-desktop.md) - RDP access for Windows VMs
+- [VM Console](site/content/docs/vm-console/_index.md) - Access VM console (VNC/SPICE)
+- [Remote Desktop](site/content/docs/remote-desktop/_index.md) - RDP access for Windows VMs
 
 ### Configuration
-- [Network](docs/network.md) - Network architecture and bridge configuration
-- [Firewall](roles/nftables/README.md) - nftables host firewall for VMs (playbooks/nftables.yaml)
-- [Base Images](docs/base-images.md) - Download Linux and Windows base images
+- [Network](site/content/docs/network/_index.md) - Network architecture and bridge configuration
+- [Firewall](site/content/docs/firewall/_index.md) - nftables host firewall for VMs (playbooks/nftables.yaml)
+- [Base Images](site/content/docs/base-images/_index.md) - Download Linux and Windows base images
+
+Browse the docs as a website with `./scripts/serve-docs.sh start` → http://localhost:1313 (English) / http://localhost:1313/zh/ (中文).
 
 ## Custom Storage Path
 

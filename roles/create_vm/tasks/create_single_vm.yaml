@@ -80,7 +80,7 @@
     - name: "Assert macOS assets are present for {{ vm.name }}"
       assert:
         that: _macos_assets.results | map(attribute='stat.exists') | select | length == _macos_assets.results | length
-        fail_msg: "Missing macOS asset(s). Copy them to {{ macos_asset_dir }} first (see docs/macos.md)."
+        fail_msg: "Missing macOS asset(s). Copy them to {{ macos_asset_dir }} first (see site/content/docs/macos/_index.md)."
       when: vm.type | default('linux') == 'macos'
 
     - name: "Create qcow2 overlay for {{ vm.name }}"

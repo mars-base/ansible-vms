@@ -16,3 +16,6 @@ var/ansible.log
 var/facts/
 .venv/
 .vscode/
+site/public/
+site/resources/
+site/.hugo_build.lock

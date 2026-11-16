@@ -1,4 +1,19 @@
-# 制作 macOS Sonoma base image（macos-sonoma-base.img）
+---
+title: 制作 macOS Sonoma 基础镜像
+description: 在 Debian 12 上用 OSX-KVM 从零制作 macos-sonoma-base.img。
+weight: 130
+icon: fa-brands fa-apple
+menus:
+  main:
+    identifier: docs-macos-base-image
+    parent: docs
+    weight: 130
+    params:
+      icon: fa-brands fa-apple
+cascade:
+  type: docs
+  footer_style: slim
+---
 
 在 Debian 12 KVM 宿主机上，用 [kholia/OSX-KVM](https://github.com/kholia/OSX-KVM) 方案手工安装 macOS Sonoma，再把成品盘固化成一张自包含的 qcow2 模板镜像，供后续派生 macOS VM 使用。
 

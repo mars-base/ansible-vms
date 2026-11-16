@@ -1,0 +1,61 @@
+sections: [hero, cards, cta]
+
+hero:
+  align: center
+  eyebrow: KVM 虚拟机管理
+  title_lines:
+    - words: [{ text: ansible-vms }]
+    - words: [{ text: 用 CSV 声明虚拟机，用 Ansible 完成交付 }]
+  lead: "把 KVM 虚拟机定义成 vms.csv 中的一行，剩下的交给 Ansible 与 libvirt——云镜像、网桥、快照、数据盘、控制台与防火墙，一切可复现、可重复执行。"
+  actions:
+    - { label: 阅读文档, url: docs/, icon: fa-solid fa-book, style: primary }
+    - { label: 快速开始, url: docs/getting-started/, icon: fa-solid fa-rocket, style: ghost }
+
+cards:
+  eyebrow: 核心功能
+  title: 你需要的一切
+  columns: 3
+  items:
+    - title: 快速开始
+      desc: 克隆仓库、复制示例配置，几分钟内创建第一台虚拟机。
+      icon: fa-solid fa-rocket
+      url: docs/getting-started/
+    - title: 虚拟机生命周期
+      desc: 启动、停止、重启、销毁虚拟机；所有 playbook 均幂等，可安全重复执行。
+      icon: fa-solid fa-arrows-rotate
+      url: docs/vm-lifecycle/
+    - title: 网络
+      desc: 网桥网络，支持 DHCP 或静态地址，内置 cloud-init 网络配置。
+      icon: fa-solid fa-network-wired
+      url: docs/network/
+    - title: 存储与磁盘
+      desc: 挂载、扩容和热插拔数据盘；用一行 CSV 定义整机磁盘布局。
+      icon: fa-solid fa-hard-drive
+      url: docs/data-disks/
+    - title: 控制台与远程桌面
+      desc: 串口控制台日志、VNC/SPICE 访问，以及 Windows 虚拟机的 RDP。
+      icon: fa-solid fa-terminal
+      url: docs/vm-console/
+    - title: macOS 虚拟机
+      desc: 黑苹果客户机，blessed NVRAM 与免键盘启动。
+      icon: fa-brands fa-apple
+      url: docs/macos/
+    - title: 防火墙
+      desc: nftables 防火墙，支持 Debian、Ubuntu、Fedora 与 Rocky，自动禁用 ufw / firewalld。
+      icon: fa-solid fa-shield-halved
+      url: docs/firewall/
+    - title: 快照
+      desc: 为运行中或已停止的虚拟机创建、恢复和删除 libvirt 快照。
+      icon: fa-solid fa-clock-rotate-left
+      url: docs/snapshots/
+    - title: 基础镜像
+      desc: 下载并准备 Debian、Ubuntu、Fedora、Rocky 与 Windows 云镜像。
+      icon: fa-solid fa-compact-disc
+      url: docs/base-images/
+
+cta:
+  title: 准备好了吗？
+  text: 安装依赖、复制示例配置，几分钟内创建第一台虚拟机。
+  label: 快速开始指南
+  url: docs/getting-started/
+  style: primary

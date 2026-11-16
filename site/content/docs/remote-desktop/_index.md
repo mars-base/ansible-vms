@@ -1,4 +1,19 @@
-# Remote Desktop Access (Windows VMs)
+---
+title: Remote Desktop
+description: RDP access to Windows virtual machines.
+weight: 100
+icon: fa-solid fa-desktop
+menus:
+  main:
+    identifier: docs-remote-desktop
+    parent: docs
+    weight: 100
+    params:
+      icon: fa-solid fa-desktop
+cascade:
+  type: docs
+  footer_style: slim
+---
 
 Windows VMs support RDP (Remote Desktop Protocol) on port 3389.
 

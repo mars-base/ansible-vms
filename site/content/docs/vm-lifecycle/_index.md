@@ -1,4 +1,19 @@
-# VM Lifecycle
+---
+title: VM Lifecycle
+description: List, start, stop, restart, and destroy virtual machines.
+weight: 30
+icon: fa-solid fa-arrows-rotate
+menus:
+  main:
+    identifier: docs-vm-lifecycle
+    parent: docs
+    weight: 30
+    params:
+      icon: fa-solid fa-arrows-rotate
+cascade:
+  type: docs
+  footer_style: slim
+---
 
 All playbooks are idempotent (safe to run multiple times).
 

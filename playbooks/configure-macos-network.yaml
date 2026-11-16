@@ -33,7 +33,7 @@
         that:
           - vm_name | length > 0
           - boot_ip | length > 0
-        fail_msg: "Required: -e vm_name=<name> -e boot_ip=<DHCP address>. See docs/macos.md."
+        fail_msg: "Required: -e vm_name=<name> -e boot_ip=<DHCP address>. See site/content/docs/macos/_index.md."
 
     - name: "Read VM inventory (vms.csv)"
       read_csv:

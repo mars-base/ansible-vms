@@ -5,7 +5,7 @@
    same PCI 1f:2 slot libvirt uses -- so boot.efi's own Startup Manager is
    satisfied and the VM cold-boots to the login window with zero keyboard input.
    Note: libvirt's send-key/input-send-event does NOT reach this guest (see
-   docs/macos.md); that's why a pre-blessed nvram template is required rather
+   site/content/docs/macos/_index.md); that's why a pre-blessed nvram template is required rather
    than booting to a picker and interacting. #}
 <domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
   <name>{{ vm.name }}</name>

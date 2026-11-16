@@ -1,0 +1,61 @@
+sections: [hero, cards, cta]
+
+hero:
+  align: center
+  eyebrow: KVM virtual machine management
+  title_lines:
+    - words: [{ text: ansible-vms }]
+    - words: [{ text: Declare VMs in a CSV, provision them with Ansible }]
+  lead: "Define KVM guests as rows in vms.csv and let Ansible and libvirt handle the rest — cloud images, bridges, snapshots, data disks, console access and firewalls, reproducibly and idempotently."
+  actions:
+    - { label: Read the docs, url: docs/, icon: fa-solid fa-book, style: primary }
+    - { label: Quick start, url: docs/getting-started/, icon: fa-solid fa-rocket, style: ghost }
+
+cards:
+  eyebrow: Key features
+  title: Everything you need
+  columns: 3
+  items:
+    - title: Quick Start
+      desc: Clone the repo, copy the example configs, and create your first VM in minutes.
+      icon: fa-solid fa-rocket
+      url: docs/getting-started/
+    - title: VM Lifecycle
+      desc: Start, stop, restart and destroy VMs; every playbook is idempotent and safe to re-run.
+      icon: fa-solid fa-arrows-rotate
+      url: docs/vm-lifecycle/
+    - title: Networking
+      desc: Bridge networking with DHCP or static addresses, cloud-init network config included.
+      icon: fa-solid fa-network-wired
+      url: docs/network/
+    - title: Storage & Disks
+      desc: Attach, resize and hot-plug data disks; build the disk layout from a single CSV row.
+      icon: fa-solid fa-hard-drive
+      url: docs/data-disks/
+    - title: Console & Remote Desktop
+      desc: Serial console logs, VNC/SPICE access, and RDP for Windows guests.
+      icon: fa-solid fa-terminal
+      url: docs/vm-console/
+    - title: macOS VMs
+      desc: Hackintosh guests with blessed NVRAM and keyboard-free boot.
+      icon: fa-brands fa-apple
+      url: docs/macos/
+    - title: Firewall
+      desc: Managed nftables firewall for Debian, Ubuntu, Fedora and Rocky hosts, with ufw and firewalld disabled.
+      icon: fa-solid fa-shield-halved
+      url: docs/firewall/
+    - title: Snapshots
+      desc: Create, restore and delete libvirt snapshots of running or stopped VMs.
+      icon: fa-solid fa-clock-rotate-left
+      url: docs/snapshots/
+    - title: Base Images
+      desc: Download and prepare Debian, Ubuntu, Fedora, Rocky and Windows cloud images.
+      icon: fa-solid fa-compact-disc
+      url: docs/base-images/
+
+cta:
+  title: Ready to get started?
+  text: Install the dependencies, copy the example configs and create your first VM in minutes.
+  label: Getting started guide
+  url: docs/getting-started/
+  style: primary

@@ -1,4 +1,19 @@
-# Setup User Account
+---
+title: User Accounts
+description: Create Linux user accounts with SSH key and passwordless sudo.
+weight: 80
+icon: fa-solid fa-user
+menus:
+  main:
+    identifier: docs-setup-user
+    parent: docs
+    weight: 80
+    params:
+      icon: fa-solid fa-user
+cascade:
+  type: docs
+  footer_style: slim
+---
 
 Create user account on Linux VMs with SSH key and passwordless sudo. Auto-skips non-Linux hosts.
 

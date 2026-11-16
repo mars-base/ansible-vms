@@ -1,10 +1,25 @@
-# Data Disks
+---
+title: Data Disks
+description: Attach, resize, mount, and manage extra data disks.
+weight: 60
+icon: fa-solid fa-hard-drive
+menus:
+  main:
+    identifier: docs-data-disks
+    parent: docs
+    weight: 60
+    params:
+      icon: fa-solid fa-hard-drive
+cascade:
+  type: docs
+  footer_style: slim
+---
 
 > **macOS VMs**: the playbooks in this document do **not** apply to macOS guests.
 > macOS disks sit on q35's built-in SATA controller (not hotpluggable, and no
 > virtio-blk driver), and macOS guests have no Python for Ansible. The data
 > disk is instead created automatically at VM-create time from the
-> `data_disk_gb` column (see [macos.md](macos.md)); each playbook detects
+> `data_disk_gb` column (see [macOS VMs](/docs/macos/)); each playbook detects
 > `type=macos` and aborts with a `diskutil` pointer.
 
 ## Attach Data Disk

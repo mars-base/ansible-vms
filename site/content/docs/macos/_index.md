@@ -1,7 +1,22 @@
-# macOS VMs (Hackintosh)
+---
+title: macOS VMs
+description: Run keyboard-free Hackintosh macOS guests alongside Linux and Windows VMs.
+weight: 120
+icon: fa-brands fa-apple
+menus:
+  main:
+    identifier: docs-macos
+    parent: docs
+    weight: 120
+    params:
+      icon: fa-brands fa-apple
+cascade:
+  type: docs
+  footer_style: slim
+---
 
 macOS guests run alongside Linux/Windows VMs. See
-[macos-base-image.md](macos-base-image.md) (Chinese) for how the base image
+[macOS Base Image](/docs/macos-base-image/) for how the base image
 was built from scratch with [kholia/OSX-KVM](https://github.com/kholia/OSX-KVM).
 
 ## How macOS differs from Linux/Windows
@@ -182,4 +197,4 @@ looks like a different, unrelated bug:
    this domain outside the standard confined-qemu model.
 
 Full rationale and the bless procedure:
-[macos-base-image.md](macos-base-image.md).
+[macOS Base Image](/docs/macos-base-image/).

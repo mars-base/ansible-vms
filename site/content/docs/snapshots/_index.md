@@ -1,4 +1,19 @@
-# Snapshots
+---
+title: Snapshots
+description: Create, list, restore, and delete VM snapshots.
+weight: 70
+icon: fa-solid fa-clock-rotate-left
+menus:
+  main:
+    identifier: docs-snapshots
+    parent: docs
+    weight: 70
+    params:
+      icon: fa-solid fa-clock-rotate-left
+cascade:
+  type: docs
+  footer_style: slim
+---
 
 Create, list, restore, and delete VM snapshots using libvirt's built-in snapshot support.
 
@@ -12,7 +27,7 @@ ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create
 ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e halt=false
 
 # Create snapshot with custom name and description
-ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e snapshot_name=before-upgrade -e snapshot_desc="升级前快照"
+ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e snapshot_name=before-upgrade -e snapshot_desc="pre-upgrade snapshot"
 
 # List all snapshots
 ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=list
