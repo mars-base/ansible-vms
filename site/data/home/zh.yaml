@@ -5,7 +5,7 @@ hero:
   eyebrow: KVM 虚拟机管理
   title_lines:
     - words: [{ text: ansible-vms }]
-    - words: [{ text: 用 CSV 声明虚拟机，用 Ansible 完成交付 }]
+    - words: [{ text: 更好地创建和管理 KVM 虚拟机 }]
   lead: "把 KVM 虚拟机定义成 vms.csv 中的一行，剩下的交给 Ansible 与 libvirt——云镜像、网桥、快照、数据盘、控制台与防火墙，一切可复现、可重复执行。"
   actions:
     - { label: 阅读文档, url: docs/, icon: fa-solid fa-book, style: primary }

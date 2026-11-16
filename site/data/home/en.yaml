@@ -5,7 +5,7 @@ hero:
   eyebrow: KVM virtual machine management
   title_lines:
     - words: [{ text: ansible-vms }]
-    - words: [{ text: Declare VMs in a CSV, provision them with Ansible }]
+    - words: [{ text: A better way to create and manage KVM VMs }]
   lead: "Define KVM guests as rows in vms.csv and let Ansible and libvirt handle the rest — cloud images, bridges, snapshots, data disks, console access and firewalls, reproducibly and idempotently."
   actions:
     - { label: Read the docs, url: docs/, icon: fa-solid fa-book, style: primary }
