@@ -1,5 +1,5 @@
 ---
-title: Building the macOS Sonoma Base Image
+title: macOS Base Image
 description: Build macos-sonoma-base.img from scratch with OSX-KVM on Debian 12.
 weight: 130
 icon: fa-brands fa-apple

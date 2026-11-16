@@ -1,5 +1,5 @@
 ---
-title: 制作 macOS Sonoma 基础镜像
+title: macOS 基础镜像
 description: 在 Debian 12 上用 OSX-KVM 从零制作 macos-sonoma-base.img。
 weight: 130
 icon: fa-brands fa-apple
