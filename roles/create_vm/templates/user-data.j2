@@ -37,6 +37,19 @@ bootcmd:
   # LANs where deb.debian.org resolves to AAAA but has no working IPv6
   # route hang apt (and cloud-init's package install) on first boot.
   - echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4
+{% if vm.os | default('') is match('^(debian|ubuntu)') %}
+  # Automatic updates compete with cloud-init's package install on first boot
+  # and can hold shutdown for many minutes.
+  - printf 'APT::Periodic::Update-Package-Lists "0";\nAPT::Periodic::Download-Upgradeable-Packages "0";\nAPT::Periodic::Unattended-Upgrade "0";\nAPT::Periodic::AutocleanInterval "0";\n' > /etc/apt/apt.conf.d/20auto-upgrades
+{% endif %}
+  - |
+    for u in apt-daily.timer apt-daily.service \
+             apt-daily-upgrade.timer apt-daily-upgrade.service \
+             unattended-upgrades.service apt-news.service esm-cache.service \
+             dnf-automatic.timer dnf-automatic-install.timer \
+             dnf-automatic-download.timer dnf-automatic-notifyonly.timer; do
+      [ "$(systemctl show -p LoadState --value "$u" 2>/dev/null)" = "loaded" ] && systemctl mask --now "$u"
+    done
 {% if _password != '' %}
   - printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' > /etc/ssh/sshd_config.d/99-cloud-init-password.conf
 {% endif %}
@@ -60,7 +73,11 @@ package_update: true
 package_upgrade: false
 packages:
 {% for pkg in vm.cloud_init_packages | default(vm_cloud_init_packages) | union(vm.cloud_init_extra_packages | default(vm_cloud_init_extra_packages)) %}
+{% if pkg == 'wget' and vm.os | default('') is match('^fedora') %}
+  - wget2
+{% else %}
   - {{ pkg }}
+{% endif %}
 {% endfor %}
 
 runcmd:
