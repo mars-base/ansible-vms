@@ -4,8 +4,8 @@ Ansible project for managing KVM virtual machines. VMs are defined in `vms.csv` 
 
 ## Requirements
 
-- **Host OS**: Debian 12 (Bookworm)
-- **Packages**: `qemu-kvm`, `libvirt-daemon-system`, `libvirt-clients`, `ovmf`, `swtpm`
+- **Host OS**: Debian 12+ / Ubuntu, or Fedora / Rocky Linux (recent releases)
+- **Packages**: installed by `playbooks/install-dependencies.yaml` (`qemu-kvm`, `libvirt`, `ovmf`/`edk2-ovmf`, `swtpm`)
 
 ## Quick Start
 

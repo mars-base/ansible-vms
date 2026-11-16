@@ -15,7 +15,7 @@
       - unzip
       - net-tools
       - ca-certificates
-    kvm_packages:
+    debian_kvm_packages:
       - qemu-kvm
       - qemu-utils
       - libvirt-daemon-system
@@ -27,6 +27,35 @@
       - bridge-utils
       - cloud-image-utils
       - genisoimage
+    redhat_packages:
+      - vim-enhanced
+      - curl
+      - wget
+      - git
+      - htop
+      - tree
+      - unzip
+      - net-tools
+      - ca-certificates
+      - qemu-kvm
+      - qemu-img
+      - libvirt-daemon-kvm
+      - libvirt-client
+      - libvirt-daemon-config-network
+      - edk2-ovmf
+      - swtpm
+      - virt-install
+      - virt-viewer
+      - genisoimage
+    redhat_libvirt_sockets:
+      - virtqemud.socket
+      - virtnetworkd.socket
+      - virtnodedevd.socket
+      - virtstoraged.socket
+      - virtsecretd.socket
+      - virtlogd.socket
+      - virtlockd.socket
+      - virtproxyd.socket
 
   tasks:
     - name: Update apt cache
@@ -35,15 +64,15 @@
         cache_valid_time: 3600
       when: ansible_os_family == "Debian"
 
-    - name: Install base packages
+    - name: Install base packages (Debian/Ubuntu)
       apt:
         name: "{{ base_packages }}"
         state: present
       when: ansible_os_family == "Debian"
 
-    - name: Install KVM packages
+    - name: Install KVM packages (Debian/Ubuntu)
       apt:
-        name: "{{ kvm_packages }}"
+        name: "{{ debian_kvm_packages }}"
         state: present
       when: ansible_os_family == "Debian"
 
@@ -68,14 +97,23 @@
         enabled: yes
       when: ansible_os_family == "Debian"
 
-    - name: Install base packages (RedHat/CentOS)
-      yum:
-        name: "{{ base_packages }}"
+    - name: Install packages (Fedora/Rocky)
+      dnf:
+        name: "{{ redhat_packages }}"
         state: present
       when: ansible_os_family == "RedHat"
 
-    - name: Install base packages (Alpine)
-      apk:
-        name: "{{ base_packages }}"
-        state: present
-      when: ansible_os_family == "Alpine"
+    - name: Check modular libvirt socket units
+      stat:
+        path: /usr/lib/systemd/system/{{ item }}
+      loop: "{{ redhat_libvirt_sockets }}"
+      register: _redhat_libvirt_sockets
+      when: ansible_os_family == "RedHat"
+
+    - name: Enable and start modular libvirt daemons
+      systemd:
+        name: "{{ item.item }}"
+        state: started
+        enabled: yes
+      loop: "{{ _redhat_libvirt_sockets.results | default([]) }}"
+      when: item.stat is defined and item.stat.exists

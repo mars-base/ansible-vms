@@ -17,8 +17,8 @@ cascade:
 
 ## 环境要求
 
-- **宿主机系统**：Debian 12（Bookworm）
-- **软件包**：`qemu-kvm`、`libvirt-daemon-system`、`libvirt-clients`、`ovmf`、`swtpm`
+- **宿主机系统**：Debian 12+ / Ubuntu，或 Fedora / Rocky Linux（新版本）
+- **软件包**：由 `playbooks/install-dependencies.yaml` 安装（`qemu-kvm`、`libvirt`、`ovmf`/`edk2-ovmf`、`swtpm`）
 
 ## 安装
 
