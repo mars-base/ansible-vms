@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # serve-docs.sh — run the Hugo docs site locally in the background.
-# Usage: serve-docs.sh [start|stop|status|log] [PORT]
+# Usage: serve-docs.sh [start|stop|restart|status|log] [PORT]
 set -euo pipefail
 
 SITE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../site" && pwd)"
@@ -21,10 +21,22 @@ case "${1:-start}" in
             exit 1
         fi
         cd "$SITE_DIR"
-        nohup hugo server --port "$PORT" >"$LOG_FILE" 2>&1 &
+        nohup hugo server --disableFastRender --port "$PORT" >"$LOG_FILE" 2>&1 &
         echo $! > "$PID_FILE"
         echo "started (pid $(cat "$PID_FILE")) — http://localhost:$PORT"
         echo "log: $LOG_FILE"
+        ;;
+    restart)
+        if running; then
+            kill "$(cat "$PID_FILE")"
+            rm -f "$PID_FILE"
+            for _ in $(seq 1 20); do
+                ss -tln 2>/dev/null | grep -q ":$PORT " || break
+                sleep 0.2
+            done
+            echo "stopped"
+        fi
+        exec "$0" start "$PORT"
         ;;
     stop)
         if running; then
@@ -45,7 +57,7 @@ case "${1:-start}" in
         tail -n "${LOG_LINES:-40}" "$LOG_FILE"
         ;;
     *)
-        echo "Usage: $0 [start|stop|status|log] [PORT]" >&2
+        echo "Usage: $0 [start|stop|restart|status|log] [PORT]" >&2
         exit 2
         ;;
 esac
