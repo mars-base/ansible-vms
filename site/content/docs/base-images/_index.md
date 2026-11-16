@@ -1,6 +1,6 @@
 ---
 title: Base Images
-description: Download Linux and Windows base images for VMs.
+description: Download Linux, Windows and macOS base images for VMs.
 weight: 40
 icon: fa-solid fa-compact-disc
 menus:
@@ -126,3 +126,15 @@ When `type=windows`, the domain XML template includes:
 - **EFI + vTPM 2.0** (OVMF secure boot + emulated TPM)
 - **virtio-scsi** disk bus + **virtio** NIC
 - **Localtime** clock with hypervclock
+
+## macOS Base Image
+
+macOS guests use a self-contained qcow2 base image built by hand on the KVM host with [OSX-KVM](https://github.com/kholia/OSX-KVM). Unlike the Linux and Windows images, it is neither downloaded nor built with Packer:
+
+- macOS Sonoma 14.8.9 (x86_64), 4 vCPU / 8 GB, account `admin` / `admin`, Remote Login enabled
+- OpenCore boot disk + blessed OVMF NVRAM template for keyboard-free cold boot
+- 64 GiB virtual size, ~29 GiB actual usage, no backing file — ready to be used as a backing image
+
+Each macOS VM gets its own system-disk overlay backed by `macos-sonoma-base.img`, an OpenCore overlay and a per-VM copy of the blessed OVMF VARS file. Set the image path in the `vms.csv` `base_image` field.
+
+The full build walkthrough (installer download, bless, NVRAM validation, image conversion) is in [macOS Base Image](/docs/macos-base-image/).

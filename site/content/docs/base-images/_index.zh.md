@@ -1,6 +1,6 @@
 ---
 title: 基础镜像
-description: 为虚拟机下载 Linux 与 Windows 基础镜像。
+description: 为虚拟机下载 Linux、Windows 与 macOS 基础镜像。
 weight: 40
 icon: fa-solid fa-compact-disc
 menus:
@@ -126,3 +126,15 @@ packer build <template>
 - **EFI + vTPM 2.0**（OVMF secure boot + 模拟 TPM）
 - **virtio-scsi** 磁盘总线 + **virtio** 网卡
 - **Localtime** 时钟，带 hypervclock
+
+## macOS 基础镜像
+
+macOS 虚拟机使用在 KVM 宿主机上通过 [OSX-KVM](https://github.com/kholia/OSX-KVM) 手工制作的自包含 qcow2 基础镜像。与 Linux、Windows 镜像不同，它既不是下载的，也不是用 Packer 构建的：
+
+- macOS Sonoma 14.8.9（x86_64），4 vCPU / 8 GB，账户 `admin` / `admin`，Remote Login 已开启
+- OpenCore 引导盘 + 已 bless 的 OVMF NVRAM 模板，冷启动无需键盘操作
+- 虚拟容量 64 GiB，实际占用约 29 GiB，无 backing file——可直接作为 backing 镜像使用
+
+每台 macOS 虚拟机都会以其为基础派生独立的系统盘 overlay、OpenCore overlay，以及一份 per-VM 的 blessed OVMF VARS 文件。在 `vms.csv` 的 `base_image` 字段中设置镜像路径。
+
+完整制作流程（安装介质下载、bless、NVRAM 校验、镜像转换）见 [macOS 基础镜像](/docs/macos-base-image/)。
