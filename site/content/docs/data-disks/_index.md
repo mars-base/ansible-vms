@@ -26,7 +26,7 @@ cascade:
 
 ```bash
 # Attach data disk to a running VM (hot-plug, no reboot needed)
-ap playbooks/attach-data-disk.yaml -e vm_name=debian12-dev
+uv run ansible-playbook playbooks/attach-data-disk.yaml -e vm_name=debian12-dev
 ```
 
 Reads `data_disk_gb` from `vms.csv`. The VM must have `data_disk_gb > 0` defined in CSV. Hot-plugs the disk to the running VM using `virsh attach-disk --config --live` (persistent + immediate effect).
@@ -43,7 +43,7 @@ mount /dev/vdb /data
 
 ```bash
 # Resize data disk (reads target size from vms.csv)
-ap playbooks/resize-data-disk.yaml -e vm_name=debian12-dev
+uv run ansible-playbook playbooks/resize-data-disk.yaml -e vm_name=debian12-dev
 ```
 
 Reads target `data_disk_gb` from `vms.csv`. The playbook will:
@@ -69,7 +69,7 @@ Resize-Partition -DriveLetter E -Size $maxSize
 
 ```bash
 # Format and mount data disk inside VM (requires VM in hosts.ini)
-ap playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data"
+uv run ansible-playbook playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data"
 ```
 
 Format and mount data disk inside Linux VM. Requires the VM to be defined in `hosts.ini`.
@@ -87,13 +87,13 @@ Format and mount data disk inside Linux VM. Requires the VM to be defined in `ho
 
 ```bash
 # With GPT partition (default)
-ap playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data"
+uv run ansible-playbook playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data"
 
 # Raw disk without partition
-ap playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data" -e "need_partition=false"
+uv run ansible-playbook playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data" -e "need_partition=false"
 
 # Force reformat (WARNING: destroys data)
-ap playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data" -e "format_force=true"
+uv run ansible-playbook playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data" -e "format_force=true"
 ```
 
 The playbook will:
@@ -122,19 +122,19 @@ the disk via `--config` only, visible on next boot.
 
 ```bash
 # one 10G disk (index/letter picked automatically)
-ap playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e extra_size=10G
+uv run ansible-playbook playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e extra_size=10G
 
 # four 2G disks in one run
-ap playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e count=4 -e extra_size=2G
+uv run ansible-playbook playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e count=4 -e extra_size=2G
 
 # override the target directory (default: VM's storage dir from vms.csv)
-ap playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e extra_dir=/data/disks
+uv run ansible-playbook playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e extra_dir=/data/disks
 ```
 
 ### List
 
 ```bash
-ap playbooks/list-extra-disks.yaml -e vm_name=debian12-01
+uv run ansible-playbook playbooks/list-extra-disks.yaml -e vm_name=debian12-01
 ```
 
 Shows each disk's index, virtual size, and its target in the live domain
@@ -151,7 +151,7 @@ Detaches the disk (live + config on a running VM — virtio-blk hot-unplug)
 and deletes the qcow2 file. Destroys data, so `confirm=true` is required:
 
 ```bash
-ap playbooks/delete-extra-disk.yaml -e vm_name=debian12-01 -e extra_index=2 -e confirm=true
+uv run ansible-playbook playbooks/delete-extra-disk.yaml -e vm_name=debian12-01 -e extra_index=2 -e confirm=true
 ```
 
 ### Identifying a disk inside the guest

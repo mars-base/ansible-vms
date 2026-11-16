@@ -26,7 +26,7 @@ cascade:
 
 ```bash
 # Attach data disk to a running VM (hot-plug, no reboot needed)
-ap playbooks/attach-data-disk.yaml -e vm_name=debian12-dev
+uv run ansible-playbook playbooks/attach-data-disk.yaml -e vm_name=debian12-dev
 ```
 
 从 `vms.csv` 读取 `data_disk_gb`，虚拟机必须在 CSV 中定义了 `data_disk_gb > 0`。通过 `virsh attach-disk --config --live` 将磁盘热插到运行中的虚拟机（持久化 + 立即生效）。
@@ -43,7 +43,7 @@ mount /dev/vdb /data
 
 ```bash
 # Resize data disk (reads target size from vms.csv)
-ap playbooks/resize-data-disk.yaml -e vm_name=debian12-dev
+uv run ansible-playbook playbooks/resize-data-disk.yaml -e vm_name=debian12-dev
 ```
 
 从 `vms.csv` 读取目标 `data_disk_gb`。playbook 会：
@@ -69,7 +69,7 @@ Resize-Partition -DriveLetter E -Size $maxSize
 
 ```bash
 # Format and mount data disk inside VM (requires VM in hosts.ini)
-ap playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data"
+uv run ansible-playbook playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data"
 ```
 
 在 Linux 虚拟机内部格式化并挂载数据盘。要求虚拟机已在 `hosts.ini` 中定义。
@@ -87,13 +87,13 @@ ap playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data"
 
 ```bash
 # With GPT partition (default)
-ap playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data"
+uv run ansible-playbook playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data"
 
 # Raw disk without partition
-ap playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data" -e "need_partition=false"
+uv run ansible-playbook playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data" -e "need_partition=false"
 
 # Force reformat (WARNING: destroys data)
-ap playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data" -e "format_force=true"
+uv run ansible-playbook playbooks/mount-disk.yaml -e "HOSTS=debian13-01" -e "mount_point=/data" -e "format_force=true"
 ```
 
 playbook 会：
@@ -121,19 +121,19 @@ playbook 会：
 
 ```bash
 # one 10G disk (index/letter picked automatically)
-ap playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e extra_size=10G
+uv run ansible-playbook playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e extra_size=10G
 
 # four 2G disks in one run
-ap playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e count=4 -e extra_size=2G
+uv run ansible-playbook playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e count=4 -e extra_size=2G
 
 # override the target directory (default: VM's storage dir from vms.csv)
-ap playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e extra_dir=/data/disks
+uv run ansible-playbook playbooks/add-extra-disk-linux.yaml -e vm_name=debian12-01 -e extra_dir=/data/disks
 ```
 
 ### 列出
 
 ```bash
-ap playbooks/list-extra-disks.yaml -e vm_name=debian12-01
+uv run ansible-playbook playbooks/list-extra-disks.yaml -e vm_name=debian12-01
 ```
 
 显示每块磁盘的索引、虚拟大小，以及在运行态 domain 和/或持久化配置中的目标设备：
@@ -148,7 +148,7 @@ extra2.qcow2: 2G, live=vdd, config=vdd
 先卸载磁盘（运行中虚拟机的运行态 + 配置——virtio-blk 热拔除），再删除 qcow2 文件。该操作会销毁数据，必须传入 `confirm=true`：
 
 ```bash
-ap playbooks/delete-extra-disk.yaml -e vm_name=debian12-01 -e extra_index=2 -e confirm=true
+uv run ansible-playbook playbooks/delete-extra-disk.yaml -e vm_name=debian12-01 -e extra_index=2 -e confirm=true
 ```
 
 ### 在客户机内识别磁盘

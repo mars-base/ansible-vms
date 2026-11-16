@@ -21,7 +21,7 @@ All playbooks are idempotent (safe to run multiple times).
 
 ```bash
 # List all VMs with status and IP
-ap playbooks/list-vms.yaml
+uv run ansible-playbook playbooks/list-vms.yaml
 ```
 
 Output example:
@@ -35,14 +35,14 @@ debian12-dev         192.168.1.103   linux    2 vCPU 2048 MB    debian12 running
 
 ```bash
 # Start specific VM
-ap playbooks/start-vm.yaml -e vm_name=debian12-dev
+uv run ansible-playbook playbooks/start-vm.yaml -e vm_name=debian12-dev
 ```
 
 ## Stop VM
 
 ```bash
 # Graceful shutdown
-ap playbooks/stop-vm.yaml -e vm_name=win11-dev
+uv run ansible-playbook playbooks/stop-vm.yaml -e vm_name=win11-dev
 ```
 
 Uses `virsh shutdown` which sends ACPI shutdown signal. For Windows VMs with QEMU guest agent configured, this triggers a clean shutdown.
@@ -51,14 +51,14 @@ Uses `virsh shutdown` which sends ACPI shutdown signal. For Windows VMs with QEM
 
 ```bash
 # Stop then start VM
-ap playbooks/restart-vm.yaml -e vm_name=debian12-dev
+uv run ansible-playbook playbooks/restart-vm.yaml -e vm_name=debian12-dev
 ```
 
 ## Destroy VM
 
 ```bash
 # Permanently delete VM (requires confirmation)
-ap playbooks/destroy-vm.yaml -e vm_name=win11-dev -e confirm=true
+uv run ansible-playbook playbooks/destroy-vm.yaml -e vm_name=win11-dev -e confirm=true
 ```
 
 Deletes: domain definition, disk images (qcow2), OVMF VARS, cloud-init ISO, TPM state.

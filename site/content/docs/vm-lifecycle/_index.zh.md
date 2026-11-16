@@ -21,7 +21,7 @@ cascade:
 
 ```bash
 # List all VMs with status and IP
-ap playbooks/list-vms.yaml
+uv run ansible-playbook playbooks/list-vms.yaml
 ```
 
 输出示例：
@@ -35,14 +35,14 @@ debian12-dev         192.168.1.103   linux    2 vCPU 2048 MB    debian12 running
 
 ```bash
 # Start specific VM
-ap playbooks/start-vm.yaml -e vm_name=debian12-dev
+uv run ansible-playbook playbooks/start-vm.yaml -e vm_name=debian12-dev
 ```
 
 ## 停止虚拟机
 
 ```bash
 # Graceful shutdown
-ap playbooks/stop-vm.yaml -e vm_name=win11-dev
+uv run ansible-playbook playbooks/stop-vm.yaml -e vm_name=win11-dev
 ```
 
 使用 `virsh shutdown`，发送 ACPI 关机信号。对于配置了 QEMU guest agent 的 Windows 虚拟机，这会触发干净关机。
@@ -51,14 +51,14 @@ ap playbooks/stop-vm.yaml -e vm_name=win11-dev
 
 ```bash
 # Stop then start VM
-ap playbooks/restart-vm.yaml -e vm_name=debian12-dev
+uv run ansible-playbook playbooks/restart-vm.yaml -e vm_name=debian12-dev
 ```
 
 ## 销毁虚拟机
 
 ```bash
 # Permanently delete VM (requires confirmation)
-ap playbooks/destroy-vm.yaml -e vm_name=win11-dev -e confirm=true
+uv run ansible-playbook playbooks/destroy-vm.yaml -e vm_name=win11-dev -e confirm=true
 ```
 
 删除内容：domain 定义、磁盘镜像（qcow2）、OVMF VARS、cloud-init ISO、TPM 状态。

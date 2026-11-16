@@ -40,10 +40,10 @@ cp vms.csv.example vms.csv          # edit with your VM definitions
 
 ```bash
 # Install required packages on KVM host
-ap playbooks/install-dependencies.yaml
+uv run ansible-playbook playbooks/install-dependencies.yaml
 
 # Create VMs defined in vms.csv
-ap playbooks/create-vm.yaml
+uv run ansible-playbook playbooks/create-vm.yaml
 ```
 
 ## 项目结构

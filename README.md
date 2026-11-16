@@ -17,7 +17,7 @@ cp vms.csv.example vms.csv    # edit with your VM definitions
 uv sync  # install ansible dependencies
 
 # 2. Create VMs defined in vms.csv
-ap playbooks/create-vm.yaml
+uv run ansible-playbook playbooks/create-vm.yaml
 ```
 
 ## Documentation

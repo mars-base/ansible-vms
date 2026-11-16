@@ -82,7 +82,7 @@ macos-sonoma-01,local,macos,8192,4,macos-sonoma,64,0,/home/fish/bucket/kvm/macos
 ## Create
 
 ```bash
-ap playbooks/create-vm.yaml -e vm_name=macos-sonoma-01
+uv run ansible-playbook playbooks/create-vm.yaml -e vm_name=macos-sonoma-01
 ```
 
 Builds the two overlays (system disk + OpenCore), seeds the per-VM NVRAM from
@@ -92,7 +92,7 @@ keyboard input; the login window appears in ~40s.
 **Network**: DHCP by default (upstream router on `br0`). Look up the IP with:
 
 ```bash
-ap playbooks/list-vms.yaml
+uv run ansible-playbook playbooks/list-vms.yaml
 ```
 
 The IP column lists every VM's address (e.g. `192.168.100.45` for macOS),
@@ -116,7 +116,7 @@ To switch a macOS VM from DHCP to a custom static IP, do it in two steps:
 2. **Run the playbook against the current (DHCP) address**:
 
    ```bash
-   ap playbooks/configure-macos-network.yaml -e vm_name=macos-sonoma-01 -e boot_ip=192.168.100.45
+   uv run ansible-playbook playbooks/configure-macos-network.yaml -e vm_name=macos-sonoma-01 -e boot_ip=192.168.100.45
    ```
 
    `boot_ip` is the DHCP address the VM answers on right now (find it with
@@ -128,13 +128,13 @@ To switch a macOS VM from DHCP to a custom static IP, do it in two steps:
 ## Start
 
 ```bash
-ap playbooks/start-vm.yaml -e vm_name=macos-sonoma-01
+uv run ansible-playbook playbooks/start-vm.yaml -e vm_name=macos-sonoma-01
 ```
 
 ## Stop
 
 ```bash
-ap playbooks/stop-vm.yaml -e vm_name=macos-sonoma-01
+uv run ansible-playbook playbooks/stop-vm.yaml -e vm_name=macos-sonoma-01
 ```
 
 macOS ignores ACPI shutdown, so the playbook only prints a notice:
@@ -147,7 +147,7 @@ macOS ignores ACPI shutdown, so the playbook only prints a notice:
 ## Destroy
 
 ```bash
-ap playbooks/destroy-vm.yaml -e vm_name=macos-sonoma-01 -e confirm=true
+uv run ansible-playbook playbooks/destroy-vm.yaml -e vm_name=macos-sonoma-01 -e confirm=true
 ```
 
 Stop the VM first (see above). The shared base image and assets are never
@@ -161,10 +161,10 @@ automatically falls back to **disk-only** snapshots for macOS:
 
 ```bash
 # snapshot a running VM (disk-only)
-ap playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=create -e snapshot_name=my-snap -e halt=false
+uv run ansible-playbook playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=create -e snapshot_name=my-snap -e halt=false
 
 # revert (VM must be shut off first; playbook tells you)
-ap playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=restore -e snapshot_name=<snap> -e confirm=true
+uv run ansible-playbook playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=restore -e snapshot_name=<snap> -e confirm=true
 ```
 
 Limitations to know:

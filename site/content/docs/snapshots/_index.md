@@ -21,22 +21,22 @@ Create, list, restore, and delete VM snapshots using libvirt's built-in snapshot
 
 ```bash
 # Create snapshot (default: shutdown VM first for disk consistency, then restore previous state)
-ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create
+uv run ansible-playbook playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create
 
 # Create snapshot without shutdown (live snapshot, VM continues running)
-ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e halt=false
+uv run ansible-playbook playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e halt=false
 
 # Create snapshot with custom name and description
-ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e snapshot_name=before-upgrade -e snapshot_desc="pre-upgrade snapshot"
+uv run ansible-playbook playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=create -e snapshot_name=before-upgrade -e snapshot_desc="pre-upgrade snapshot"
 
 # List all snapshots
-ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=list
+uv run ansible-playbook playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=list
 
 # Restore to snapshot (requires confirmation, restores VM state at snapshot time)
-ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=restore -e snapshot_name=before-upgrade -e confirm=true
+uv run ansible-playbook playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=restore -e snapshot_name=before-upgrade -e confirm=true
 
 # Delete snapshot
-ap playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=delete -e snapshot_name=before-upgrade
+uv run ansible-playbook playbooks/snapshot-vm.yaml -e vm_name=debian12-01 -e snap_action=delete -e snapshot_name=before-upgrade
 ```
 
 ## Parameters

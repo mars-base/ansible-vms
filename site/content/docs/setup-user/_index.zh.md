@@ -21,13 +21,13 @@ cascade:
 
 ```bash
 # Create user on single VM
-ap playbooks/setup-user.yaml -e "HOSTS=debian12-01" -e "username=admin"
+uv run ansible-playbook playbooks/setup-user.yaml -e "HOSTS=debian12-01" -e "username=admin"
 
 # Create user on multiple VMs (host group)
-ap playbooks/setup-user.yaml -e "HOSTS=vms" -e "username=admin"
+uv run ansible-playbook playbooks/setup-user.yaml -e "HOSTS=vms" -e "username=admin"
 
 # Specify SSH public key
-ap playbooks/setup-user.yaml -e "HOSTS=debian12-01" -e "username=admin" -e "ssh_pubkey=/path/to/id_rsa.pub"
+uv run ansible-playbook playbooks/setup-user.yaml -e "HOSTS=debian12-01" -e "username=admin" -e "ssh_pubkey=/path/to/id_rsa.pub"
 ```
 
 ## 参数

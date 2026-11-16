@@ -80,7 +80,7 @@ macos-sonoma-01,local,macos,8192,4,macos-sonoma,64,0,/home/fish/bucket/kvm/macos
 ## 创建
 
 ```bash
-ap playbooks/create-vm.yaml -e vm_name=macos-sonoma-01
+uv run ansible-playbook playbooks/create-vm.yaml -e vm_name=macos-sonoma-01
 ```
 
 构建两个 overlay（系统盘 + OpenCore），从 bless 模板播种每台虚拟机的
@@ -90,7 +90,7 @@ NVRAM，并定义/启动 domain。冷启动无需任何键盘输入；登录窗�
 **网络**：默认 DHCP（`br0` 上游路由器）。查询 IP：
 
 ```bash
-ap playbooks/list-vms.yaml
+uv run ansible-playbook playbooks/list-vms.yaml
 ```
 
 IP 列会列出每台虚拟机的地址（如 macOS 的 `192.168.100.45`），VNC 列显示
@@ -114,7 +114,7 @@ IP 列会列出每台虚拟机的地址（如 macOS 的 `192.168.100.45`），VN
 2. **针对当前（DHCP）地址运行 playbook**：
 
    ```bash
-   ap playbooks/configure-macos-network.yaml -e vm_name=macos-sonoma-01 -e boot_ip=192.168.100.45
+   uv run ansible-playbook playbooks/configure-macos-network.yaml -e vm_name=macos-sonoma-01 -e boot_ip=192.168.100.45
    ```
 
    `boot_ip` 是虚拟机此刻响应的 DHCP 地址（用 `list-vms` 查询）。playbook
@@ -126,13 +126,13 @@ IP 列会列出每台虚拟机的地址（如 macOS 的 `192.168.100.45`），VN
 ## 启动
 
 ```bash
-ap playbooks/start-vm.yaml -e vm_name=macos-sonoma-01
+uv run ansible-playbook playbooks/start-vm.yaml -e vm_name=macos-sonoma-01
 ```
 
 ## 停止
 
 ```bash
-ap playbooks/stop-vm.yaml -e vm_name=macos-sonoma-01
+uv run ansible-playbook playbooks/stop-vm.yaml -e vm_name=macos-sonoma-01
 ```
 
 macOS 忽略 ACPI 关机，因此 playbook 只打印提示：
@@ -145,7 +145,7 @@ macOS 忽略 ACPI 关机，因此 playbook 只打印提示：
 ## 销毁
 
 ```bash
-ap playbooks/destroy-vm.yaml -e vm_name=macos-sonoma-01 -e confirm=true
+uv run ansible-playbook playbooks/destroy-vm.yaml -e vm_name=macos-sonoma-01 -e confirm=true
 ```
 
 先停止虚拟机（见上）。共享的基础镜像和资产不会被触碰。
@@ -157,10 +157,10 @@ macOS domain 通过 pflash OVMF 和 RAW NVRAM 文件启动，libvirt 因此拒�
 
 ```bash
 # snapshot a running VM (disk-only)
-ap playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=create -e snapshot_name=my-snap -e halt=false
+uv run ansible-playbook playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=create -e snapshot_name=my-snap -e halt=false
 
 # revert (VM must be shut off first; playbook tells you)
-ap playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=restore -e snapshot_name=<snap> -e confirm=true
+uv run ansible-playbook playbooks/snapshot-vm.yaml -e vm_name=macos-sonoma-01 -e snap_action=restore -e snapshot_name=<snap> -e confirm=true
 ```
 
 需要了解的局限：
